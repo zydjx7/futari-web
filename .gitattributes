@@ -1,0 +1,2 @@
+desktop/scripts/*.sh text eol=lf
+desktop/src-tauri/src/platform/*.m text eol=lf

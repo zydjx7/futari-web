@@ -1,0 +1,24 @@
+{
+  "name": "futari",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "predev": "node scripts/init-local.mjs && npm run db:local",
+    "dev": "node --env-file=scripts/wrangler-local.env node_modules/wrangler/bin/wrangler.js dev --local --ip 127.0.0.1 --port 8787",
+    "db:local": "wrangler d1 migrations apply notes-db --local --force",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "cheerio": "1.2.0",
+    "fflate": "0.8.3",
+    "playwright-core": "1.65.1",
+    "wrangler": "4.165.0"
+  },
+  "dependencies": {
+    "katex": "0.19.1"
+  }
+}

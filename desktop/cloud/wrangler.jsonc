@@ -1,0 +1,7 @@
+{
+  "name":"futari-desktop-local", "main":"index.js", "compatibility_date":"2026-10-01",
+  "workers_dev":false, "preview_urls":false,
+  "d1_databases":[{"binding":"DB","database_name":"desktop-test","database_id":"00000000-0000-4000-8000-000000000001","migrations_dir":"../../migrations"}],
+  "r2_buckets":[{"binding":"FILES","bucket_name":"notes-files"}],
+  "env":{"production":{"name":"futari-desktop","workers_dev":true,"preview_urls":false,"secrets":{"required":["PASSCODE_HER","PASSCODE_ADMIN","SESSION_SECRET"]},"d1_databases":[{"binding":"DB","database_name":"notes-db","database_id":"5bfe8189-aef8-49da-b3d6-a48c1a5d87b8"}],"r2_buckets":[{"binding":"FILES","bucket_name":"notes-files"}]}}
+}
