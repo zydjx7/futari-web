@@ -25,7 +25,7 @@ function call(name, { token, body, ip = "192.0.2.2" } = {}) {
   });
 }
 test("only the native notebook can invoke rename", async () => {
-  const directory = "desktop/src-tauri/capabilities/";
+  const directory = "desktop-app/desktop/src-tauri/capabilities/";
   const permitted = [];
   for (const file of await readdir(directory)) {
     if (!file.endsWith(".json")) continue;

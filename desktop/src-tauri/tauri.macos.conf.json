@@ -1,7 +1,0 @@
-{
-  "bundle": {
-    "icon": ["icons/icon.icns", "icons/icon.png"],
-    "resources": {"../scenes/snow-forest/": "scenes/snow-forest/"},
-    "macOS": {"minimumSystemVersion": "12.0"}
-  }
-}

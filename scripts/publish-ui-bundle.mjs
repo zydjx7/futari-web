@@ -21,7 +21,7 @@ const { values: v } = parseArgs({
   ),
 });
 const keyFile = ".update-signing-key.pem",
-  pubFile = "desktop/src-tauri/update-public-key.bin";
+  pubFile = "desktop-app/desktop/src-tauri/update-public-key.bin";
 if (v["init-key"]) {
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   writeFileSync(keyFile, privateKey.export({ format: "pem", type: "pkcs8" }), {
@@ -46,7 +46,7 @@ if (
     .equals(readFileSync(pubFile))
 )
   throw Error("签名密钥与客户端公钥不匹配");
-execFileSync(process.execPath, ["desktop/scripts/prepare.mjs"], {
+execFileSync(process.execPath, ["desktop-app/desktop/scripts/prepare.mjs"], {
   stdio: "inherit",
 });
 const files = {};
@@ -59,8 +59,8 @@ function collect(dir, prefix = "") {
       files[name] = readFileSync(path);
   }
 }
-collect("desktop/build/ui");
-files["catalog.json"] = readFileSync("desktop/src-tauri/catalog.json");
+collect("desktop-app/desktop/build/ui");
+files["catalog.json"] = readFileSync("desktop-app/desktop/src-tauri/catalog.json");
 const bytes = zipSync(files),
   signature = sign(null, bytes, key);
 if (
@@ -70,7 +70,7 @@ if (
   throw Error("资源包校验失败");
 const ui = {
   version,
-  minAppVersion: JSON.parse(readFileSync("desktop/src-tauri/tauri.conf.json"))
+  minAppVersion: JSON.parse(readFileSync("desktop-app/desktop/src-tauri/tauri.conf.json"))
     .version,
   sha256: createHash("sha256").update(bytes).digest("hex"),
   size: bytes.length,

@@ -49,17 +49,15 @@ npm.cmd run dev
 
 最后，各自在常用浏览器关闭页面再打开，核对仍用原身份进入。要验证退出，只在其中一台设备点「退出登录」。该设备下次进入时显示锁屏，另一台设备仍能使用。
 
-### macOS 桌宠出包
+### Windows 与 macOS 桌宠
 
-1. 在 Mac 项目根目录使用 Node 24、Rust stable（rustup）和 Xcode Command Line Tools。首次安装编译工具可运行 `xcode-select --install`。执行 `npm ci`，再运行 `bash desktop/scripts/build-macos.sh --universal`。省略参数会构建本机架构，也可传 `aarch64-apple-darwin` 或 `x86_64-apple-darwin`。输出为 `desktop/dist/FUTARI-Desktop-macOS.zip`。
-2. 也可将项目源码放在自己的私有 GitHub 仓库，在 Actions → FUTARI Desktop macOS → Run workflow 启动。默认托管 macos-15。GitHub 于 2026-11-02 退役托管 macos-14，已有 Sonoma 自托管 runner 可添加 macos-14 标签并选择 self-hosted-macos-14。成功后在 Artifacts 下载并解开 GitHub 外层归档，取出同名的内层应用 ZIP，放入 Windows 项目的 desktop/dist。工作流只构建、测试和保存产物。[GitHub 公告](https://github.com/actions/runner-images/issues/13518)
-3. 在 Mac 解压后打开应用。在编辑器中输入时点兔子，核对输入焦点、两耳之间的鼠标穿透、拖拽、菜单栏。在编辑器内按 ⌥J 循环切换兔子层级，按 ⌥K 切换壁纸，检查输入焦点是否仍在编辑器。切到桌面检查雪景，连接外屏检查程序坞上沿，合盖或锁屏一段时间再检查陪伴累计。手账「风景册」可打开用户场景目录并刷新。云端模式依赖专用 Worker 上线。
+[FUTARI 桌面应用](https://github.com/zydjx7/futari-desktop) 维护两端原生程序。[版本下载](https://github.com/zydjx7/futari-desktop/releases/latest) 提供已构建的平台压缩包。主站负责网页兔窝、云端接口和受权限保护的下载入口。
 
-若从 Windows 复制源码后脚本缺少可执行位，在 Mac 项目根目录执行 `chmod +x desktop/scripts/build-macos.sh`，随后可直接运行 `./desktop/scripts/build-macos.sh --universal`。
+修改网站无需下载桌面源码。运行桌面接口测试或签发桌宠 UI 更新前，先执行 `git submodule update --init desktop-app`，取得网站关联的桌面版本。独立应用的构建说明在该仓库首页。
 
 ### 本地兔窝下载验收
 
-在项目根目录执行 `./desktop/scripts/build.ps1`，再执行 `node scripts/upload-desktop.mjs --local` 和 `npm run dev`。用她的身份打开兔窝 → 风景册，底部显示已经上传的平台包。Windows 上保持本地站运行，另一个终端运行 `node scripts/check-desktop-download.mjs` 可在 Edge 复验授权、ZIP 完整性并生成截图。
+将所需平台的发行 ZIP 放入网站项目的 `desktop/dist/`，再执行 `node scripts/upload-desktop.mjs --local` 和 `npm run dev`。用她的身份打开兔窝 → 风景册，底部显示已经上传的平台包。Windows 上保持本地站运行，另一个终端运行 `node scripts/check-desktop-download.mjs` 可在 Edge 复验授权、ZIP 完整性并生成截图。
 
 ### 正式上线命令清单（由站主执行）
 

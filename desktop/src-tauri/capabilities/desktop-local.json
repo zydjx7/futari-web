@@ -1,1 +1,0 @@
-{"identifier": "desktop-local", "description": "Local display and scene catalogue", "windows": ["stage", "card"], "permissions": ["core:event:allow-listen", "core:event:allow-unlisten", "allow-desktop-view", "allow-focused-shortcut", "allow-scene-list", "allow-save-print", "allow-ui-bundle-info", "allow-ui-bundle-rollback"]}
