@@ -1,6 +1,17 @@
 # FUTARI
 
-双人私密网站。日常有菜单、小说、Puzzle 和新闻。她可以点导航角落的兔耳或按 Alt+B 召唤焦糖兔，你可以在后台录入内容、调账和留言。[整站定稿](./outputs/双人私密网站-V1设计书.md)
+双人私密网站。日常有菜单、小说、Puzzle 和新闻。她可以点导航角落的兔耳或按 Alt+B 召唤焦糖兔，你可以在后台录入内容、调账和留言。
+
+## 获取源码
+
+使用有仓库访问权限的 GitHub 账号克隆网站：
+
+```sh
+git clone https://github.com/zydjx7/futari-web.git
+cd futari-web
+```
+
+SSH 地址为 `git@github.com:zydjx7/futari-web.git`。日常开发在 `main` 上运行 `git pull --ff-only` 获取更新。仅在桌面接口测试或签发桌宠更新时，需要额外执行 `git submodule update --init desktop-app`。独立构建桌宠请直接克隆[桌面应用仓库](https://github.com/zydjx7/futari-desktop#从源码构建)。
 
 ## 在本机打开
 

@@ -8,9 +8,11 @@ test("下载卡只显示就绪平台，电脑优先本机版本，手机仅提�
   const el=(tag,text)=>({tag,text,children:[], append(...nodes){this.children.push(...nodes);}});
   const data=Object.fromEntries(Object.entries(archives).map(([id,key])=>[id,{ready:true,size:1024,url:"/api/files/"+key}]));
   const render=(packs,userAgent,platform="",maxTouchPoints=0)=>desktopCard(packs,el,{userAgent,platform,maxTouchPoints});
-  assert.equal(render({}, "Windows"),null);
+  const [source] = render({}, "Windows").children.filter(n => n.tag === "a");
+  assert.equal(source.href, "https://github.com/zydjx7/futari-desktop#从源码构建");
+  assert.equal(source.download, undefined);
   for(const [ua,id] of [["Windows","windows"],["Macintosh","macos"]]){
-    const links=render(data,ua).children.filter(n=>n.tag==="a");
+    const links=render(data,ua).children.filter(n=>n.download==="");
     assert.equal(links.length,2);
     assert.equal(links[0].href,data[id].url);
   }
