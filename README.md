@@ -53,7 +53,7 @@ npm.cmd run dev
 
 1. 在 Mac 项目根目录使用 Node 24、Rust stable（rustup）和 Xcode Command Line Tools。首次安装编译工具可运行 `xcode-select --install`。执行 `npm ci`，再运行 `bash desktop/scripts/build-macos.sh --universal`。省略参数会构建本机架构，也可传 `aarch64-apple-darwin` 或 `x86_64-apple-darwin`。输出为 `desktop/dist/FUTARI-Desktop-macOS.zip`。
 2. 也可将项目源码放在自己的私有 GitHub 仓库，在 Actions → FUTARI Desktop macOS → Run workflow 启动。默认托管 macos-15。GitHub 于 2026-11-02 退役托管 macos-14，已有 Sonoma 自托管 runner 可添加 macos-14 标签并选择 self-hosted-macos-14。成功后在 Artifacts 下载并解开 GitHub 外层归档，取出同名的内层应用 ZIP，放入 Windows 项目的 desktop/dist。工作流只构建、测试和保存产物。[GitHub 公告](https://github.com/actions/runner-images/issues/13518)
-3. 在 Mac 解压后打开应用。在编辑器中输入时点兔子，核对输入焦点、两耳之间的鼠标穿透、拖拽、菜单栏和 ⌥Q / ⌥W。切到桌面检查雪景，连接外屏检查程序坞上沿，合盖或锁屏一段时间再检查陪伴累计。手账「风景册」可打开用户场景目录并刷新。云端模式依赖专用 Worker 上线。
+3. 在 Mac 解压后打开应用。在编辑器中输入时点兔子，核对输入焦点、两耳之间的鼠标穿透、拖拽、菜单栏。在编辑器内按 ⌥J 循环切换兔子层级，按 ⌥K 切换壁纸，检查输入焦点是否仍在编辑器。切到桌面检查雪景，连接外屏检查程序坞上沿，合盖或锁屏一段时间再检查陪伴累计。手账「风景册」可打开用户场景目录并刷新。云端模式依赖专用 Worker 上线。
 
 若从 Windows 复制源码后脚本缺少可执行位，在 Mac 项目根目录执行 `chmod +x desktop/scripts/build-macos.sh`，随后可直接运行 `./desktop/scripts/build-macos.sh --universal`。
 

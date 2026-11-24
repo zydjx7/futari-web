@@ -85,7 +85,7 @@ export class GroomPaint {
     this.plate = surface(w,h);
     this.read = surface(w,h);
     this.geometry = rig.geometry(lift,face,p);
-    this.calm = { ...p, action:"idle", breath:0, sniff:0, blink:0, ear:0, tilt:0 };
+    this.calm = { ...p, action:"idle", breath:0, sniff:0, blink:0, ear:0, tilt:0, load:0, impact:0, rear:0, noseDown:0, press:0, chew:0 };
     this.frames = new Map();
     this.fields = new Map();
     this.output = this.plate.createImageData(w,h);
@@ -133,7 +133,28 @@ export class GroomPaint {
     return this.mid??=this.contacts().painting(7).canvas;
   }
   contacts(){
-    return this.bridge??=new GroomBridge(this.rig,()=>this.source(null),()=>this.rubbingCoat());
+    return this.bridge??=new GroomBridge(this.rig,()=>this.source(null),()=>this.rubbingCoat(),
+      (part,travel,blink)=>this.portraitPixels(part,travel,blink));
+  }
+  portraitPixels(part,travel=0,blink=0){
+    const c=this.portraitSurface??=surface(this.plate.canvas.width,this.plate.canvas.height);
+    const {w,h,left,top}=this.geometry;
+    const [dx,dy]=this.guide.bridges.headTravel;
+    c.clearRect(0,0,c.canvas.width,c.canvas.height);
+    c.save();c.translate(dx*travel,dy*travel);
+    c.scale(c.canvas.width/w,c.canvas.height/h);c.translate(-left,-top);
+    const probe=this.rig.probe;
+    this.rig.probe=null;
+    try{
+      if(part==='body')this.rig.part(c,'fBody',...this.rig.art.front.fBody);
+      else this.rig.front(c,{...this.calm,blink,washLids:true},false);
+    }finally{this.rig.probe=probe;c.restore();}
+    const pixels=c.getImageData(0,0,c.canvas.width,c.canvas.height).data;
+    for(let i=0;i<pixels.length;i+=4){
+      const a=pixels[i+3]/255;
+      if(a<1)for(let k=0;k<3;k++)pixels[i+k]*=a;
+    }
+    return pixels;
   }
   seated(c){
     const g=this.geometry;
@@ -156,7 +177,7 @@ export class GroomPaint {
       const bridge=this.contacts();
       if(n===2)bridge.swatches();
       else if(n===5||n===6)bridge.prime(n===5?0:1);
-      else bridge.plate(({3:1,4:4,7:2,8:3,9:7,10:5})[n]);
+      else if(n<9)bridge.plate(({3:1,4:4,7:2,8:3})[n]);
     }catch(error){
       if(error.name!=="SecurityError")throw error;
       this.prepared=11;
@@ -174,7 +195,6 @@ export class GroomPaint {
       a=down;t=1-.018*Math.sin(Math.PI*(time-1.19)/.24)**2;
     }
     if (!a && !b)return this.seated(c);
-    if (a===stroke && b===stroke)return this.draw(c,a,b,t,0);
     const bridge=this.contacts();
     try {
       const frame=bridge.render(a,b,t), g=this.geometry, probe=this.rig.probe;
@@ -208,12 +228,6 @@ export class GroomPaint {
     const g=this.geometry, layer=this.rubLayer, w=layer.canvas.width,h=layer.canvas.height;
     if (progress!==this.rubAt || release!==this.rubRelease) {
       layer.clearRect(0,0,w,h);
-      layer.save();
-      const travel=Math.sin(2*Math.PI*progress)**2;
-      const nod=(2.4*travel+.65*Math.sin(2*Math.PI*progress))*amplitude;
-      // A tiny nod accumulates towards the crown; the planted heels keep
-      // their ground contact. All three paintings share this breathing space.
-      layer.translate(0,nod);layer.scale(1,1-nod/h);
       layer.drawImage(this.rubBody,0,0);
       for (const i of [1,0]) {
         const joint=i===0 ? [94.1,258.8] : [218.5,258.1];
@@ -224,7 +238,6 @@ export class GroomPaint {
         layer.drawImage(s.canvas,s.x-joint[0],s.y-joint[1]);
         layer.restore();
       }
-      layer.restore();
       this.rubAt=progress;this.rubRelease=release;
     }
     if (!this.rig.probe) {c.drawImage(layer.canvas,g.left,g.top,g.w,g.h);return;}

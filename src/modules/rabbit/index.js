@@ -148,9 +148,15 @@ export async function rabbitApi(ctx, action) {
     key = form.get("request_id");
   if (action === "place") {
     if (!Object.hasOwn(shop,item) || shop[item].nourishment) throw new InputError("请选择窝里的摆件");
-    const placed = await ctx.db.prepare("UPDATE rabbit_inventory SET placed=1 WHERE item=? AND quantity>0 RETURNING item")
-      .bind(item).first();
-    return placed ? new Response(null,{status:204}) : conflict("先把它带回小篮子吧");
+    const raw = form.get("placed") ?? "1";
+    if (!["0","1","true","false"].includes(raw)) throw new InputError("摆放状态无效");
+    const on = raw === "1" || raw === "true", slot = shop[item].slot;
+    const peers = on && slot ? Object.keys(shop).filter(k => shop[k].slot === slot) : [item];
+    const changed = await ctx.db.prepare(
+      "UPDATE rabbit_inventory SET placed=CASE WHEN item=? THEN ? ELSE 0 END WHERE item IN (" +
+      peers.map(() => "?").join(",") + ") AND EXISTS (SELECT 1 FROM rabbit_inventory WHERE item=? AND quantity>0)"
+    ).bind(item, Number(on), ...peers, item).run();
+    return changed.meta.changes ? new Response(null,{status:204}) : conflict("先把它带回小篮子吧");
   }
   if (!Object.hasOwn(shop, item) || !isId(key)) throw new InputError("物品或操作凭据无效");
   return action === "buy" ? buy(ctx.db, item, key) : feed(ctx.db, item, key);

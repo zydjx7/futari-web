@@ -1,0 +1,3 @@
+html, body { margin: 0; overflow: hidden; background: transparent; pointer-events: none; }
+html.appkit-stage { background: #00ff00; }
+canvas { position: absolute; }

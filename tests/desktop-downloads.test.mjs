@@ -14,6 +14,9 @@ test("下载卡只显示就绪平台，电脑优先本机版本，手机仅提�
     assert.equal(links.length,2);
     assert.equal(links[0].href,data[id].url);
   }
+  const macHelp = render({ macos: data.macos }, "Macintosh").children.map(node => node.text).join(" ");
+  assert.match(macHelp, /⌥J.*⌥K.*其他应用.*菜单栏/);
+  assert.doesNotMatch(macHelp, /Option \+ Q|Alt \+ Q|托盘/);
   for(const mobile of [render(data,"iPhone"),render(data,"Macintosh","MacIntel",5)]){
     assert.ok(mobile.children.some(n=>n.text.includes("电脑浏览器")));
     assert.ok(!mobile.children.some(n=>n.tag==="a"));

@@ -1,0 +1,1 @@
+{"identifier":"wallpaper","description":"Read the selected scenery for the passive wallpaper window","windows":["wallpaper"],"permissions":["core:event:allow-listen","core:event:allow-unlisten","allow-desktop-view","allow-scene-list","allow-scene-layer","allow-ui-bundle-info","allow-ui-bundle-rollback"]}

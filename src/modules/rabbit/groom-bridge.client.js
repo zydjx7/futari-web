@@ -67,63 +67,6 @@ function closeEyes(out,open,closed,t){
   }
 }
 
-// The far cheek continues UNDER the raised paw. Its last few millimetres
-// were missing from the uncovered backing. Trace that single crayon line
-// before painting the paw; the hand itself controls exactly where it ends.
-const contactJaw={
-  4:[[182,234],[190,234.5],[202,234.8],[214,233.4],[226,232],[238,229.8],[250,225],[260,219]],
-  7:[[182,224.2],[190,226.5],[202,228.2],[213,228.2],[223,227.3],[233,225.1],[246,219],[257,212]],
-  5:[[174,230.5],[183,230.8],[193,229.7],[202,227.0],[210,223.2],[218,217.8],[229,209],[239,200]],
-  6:[[172,233.5],[180,234.4],[188,234.5],[196,233.8],[203,231.6],[212,228],[222,220],[234,209]]
-};
-function joinCheek(pixels,i,j,t,hand){
-  const a=contactJaw[i],b=contactJaw[j];if(!a||!b)return;
-  const x=a.map((v,n)=>v[0]+(b[n][0]-v[0])*t),y=a.map((v,n)=>v[1]+(b[n][1]-v[1])*t);
-  const lo=Math.ceil(x[0]),hi=Math.ceil(x.at(-1)),count=hi-lo;
-  const line=new Float32Array(count),offset=new Float32Array(count),weight=new Float32Array(count);
-  let k=1;
-  for(let col=lo;col<hi;col++){
-    const n=col-lo;
-    while(k<x.length-1 && col>x[k])k++;
-    const y0=y[k-1]+(col-x[k-1])*(y[k]-y[k-1])/(x[k]-x[k-1]);
-    line[n]=y0;
-    let mass=0,centre=0;
-    for(let row=Math.round(y0)-7;row<=Math.round(y0)+7;row++){
-      const at=4*(row*size+col),lum=.2126*pixels[at]+.7152*pixels[at+1]+.0722*pixels[at+2];
-      const w=Math.max(0,150-lum)*clamp01(1-Math.abs(row-y0)/8);
-      mass+=w;centre+=w*(row-y0);
-    }
-    if(mass>25){offset[n]=centre/mass;weight[n]=Math.min(1,mass/130);}
-  }
-  const center=new Float32Array(count);
-  for(let n=0;n<count;n++){
-    let mass=0,total=0;
-    for(let v=Math.max(0,n-7);v<=Math.min(count-1,n+7);v++){
-      const w=(8-Math.abs(v-n))*weight[v];mass+=w;total+=w*offset[v];
-    }
-    center[n]=line[n]+total/Math.max(8,mass);
-  }
-  for(let col=lo;col<hi;col++){
-    const n=col-lo,cy=center[n];
-    const slope=(center[Math.min(count-1,n+2)]-center[Math.max(0,n-2)])/Math.min(4,n+2,count+1-n);
-    const norm=Math.hypot(1,slope),start=clamp01(n/9),above=4*((Math.round(cy)-8)*size+col),below=above+16*size*4;
-    const light=pixels.slice(above,above+3),fur=pixels.slice(below,below+3);
-    for(let row=Math.floor(cy-7);row<=Math.ceil(cy+7);row++){
-      const at=4*(row*size+col),d=(row-cy)/norm,abs=Math.abs(d);
-      let blend=start*clamp01((6.9-abs)/2.2);
-      if(hand){
-        const xx=col-hand.x,yy=row-hand.y;
-        if(xx>=0&&xx<hand.width&&yy>=0&&yy<hand.height)blend*=1-hand.pixels[4*(yy*hand.width+xx)+3]/255;
-      }
-      if(!blend||pixels[at+3]<250)continue;
-      const ink=clamp01((2.04-abs)/1.34),paper=d<0?light:fur,grain=1.6*Math.sin(col*.73)+1.4*Math.cos(row*.84);
-      for(let c=0;c<3;c++){
-        const base=paper[c],color=(1-ink)*base+ink*([117,78,51][c]+grain);
-        pixels[at+c]+=blend*(color-pixels[at+c]);
-      }
-    }
-  }
-}
 function seatedCoat(source){
   const out=new Uint8ClampedArray(source);
   // The front painting contains the two *front* feet on the floor. Rebuild
@@ -184,35 +127,6 @@ function shoulderX(pixels,y){
     }
   }
   return 82;
-}
-function foldedShoulder(out,from,to,t){
-  function edgeAt(layer,row){
-    const lo=Math.floor(row),x=shoulderX(layer,lo);
-    return x+(row-lo)*(shoulderX(layer,lo+1)-x);
-  }
-  function corner(coat){
-    if(coat.shoulderY!==undefined)return coat.shoulderY;
-    let widest=0;
-    for(let y=207;y<=235;y++){
-      const x=shoulderX(coat.pixels,y);
-      if(x>widest){widest=x;coat.shoulderY=y;}
-    }
-    return coat.shoulderY;
-  }
-  const a=corner(from),b=corner(to),pivot=a+t*(b-a);
-  for(let offset=-22;offset<=36;offset++){
-    const y=Math.round(pivot)+offset,ya=y+a-pivot,yb=y+b-pivot;
-    const xa=edgeAt(from.pixels,ya),xb=edgeAt(to.pixels,yb),x0=xa+t*(xb-xa);
-    const vertical=clamp01((offset+22)/7)*clamp01((36-offset)/8);
-    for(let x=Math.floor(x0-15);x<=Math.ceil(x0+16);x++){
-      const depth=x-x0,blend=vertical*clamp01((16-Math.abs(depth))/6);
-      const dst=4*(y*size+x);
-      for(let c=0;c<4;c++){
-        const ink=(1-t)*sampleChannel(from.pixels,xa+depth,ya,c)+t*sampleChannel(to.pixels,xb+depth,yb,c);
-        out[dst+c]+=blend*(ink-out[dst+c]);
-      }
-    }
-  }
 }
 function uncoverShoulder(out,coat,t){
   // A passing wrist can briefly cover the same outside stroke with its soft
@@ -293,20 +207,23 @@ function landFrontToe(out,moving,seated,settle){
     }
   }
 }
-function seatedBody(out,from,to,t,step,grids,soles){
+function seatedBody(out,from,to,t,step,grids,soles,shoulder){
   const u=1-t,cols=size/step+1,at=t*(grids.length-1);
   const index=Math.min(grids.length-2,at|0),v=at-index,ga=grids[index],gb=grids[index+1];
   const field=new Float32Array(ga.length),A=soles[0],B=soles[1];
   for(let i=0;i<field.length;i++)field[i]=.5*(ga[i]+v*(gb[i]-ga[i]));
   for(let y=2;y<size;y++){
     const r=(y/step|0)*cols,f=y%step/step;
+    const q=shoulder?clamp01((y+u*shoulder[1]-225)/54):1;
+    const mesh=q*q*(3-2*q),sx=(1-mesh)*(shoulder?.[0]??0),sy=(1-mesh)*(shoulder?.[1]??0);
     for(let x=24;x<354;x+=step){
       const lo=2*(r+x/step),hi=lo+2*cols;
       let dx=field[lo]*(1-f)+field[hi]*f,dy=field[lo+1]*(1-f)+field[hi+1]*f;
       const ix=(field[lo+2]*(1-f)+field[hi+2]*f-dx)/step,iy=(field[lo+3]*(1-f)+field[hi+3]*f-dy)/step;
       for(let j=0;j<step;j++,dx+=ix,dy+=iy){
-        const col=x+j,lx=Math.max(0,Math.min(382.999,col-t*dx)),ly=Math.max(0,Math.min(382.999,y-t*dy));
-        const rx=Math.max(0,Math.min(382.999,col+u*dx)),ry=Math.max(0,Math.min(382.999,y+u*dy));
+        const col=x+j,vx=sx+mesh*dx,vy=sy+mesh*dy;
+        const lx=Math.max(0,Math.min(382.999,col-t*vx)),ly=Math.max(0,Math.min(382.999,y-t*vy));
+        const rx=Math.max(0,Math.min(382.999,col+u*vx)),ry=Math.max(0,Math.min(382.999,y+u*vy));
         const l=4*((ly|0)*size+(lx|0)),r=4*((ry|0)*size+(rx|0)),row=4*size,d=4*(y*size+col);
         if(!(from[l+3]|from[l+7]|from[l+row+3]|from[l+row+7]|to[r+3]|to[r+7]|to[r+row+3]|to[r+row+7]))continue;
         const fx=lx-(lx|0),fy=ly-(ly|0),gx=rx-(rx|0),gy=ry-(ry|0);
@@ -326,10 +243,12 @@ function seatedBody(out,from,to,t,step,grids,soles){
           // the pigment at the donor weight punched a triangle inside the rim.
           if(depth>-1 && (depth<4 || (col<141 && out[d+3]<255))){
             const old=out[d+3],alpha=255*clamp01(.5+depth);
-            const pencil=clamp01((2.6-depth)/1.5)*clamp01(18*Math.min(t,u));
+            // Both the interior and the feathered edge use the current fur.
+            // Retain the approved rounding at partially covered toe pixels.
+            const edge=clamp01((2.6-depth)/1.5)*clamp01(18*Math.min(t,u));
             for(let k=0;k<3;k++){
-              const ink=k===0?120:k===1?79:51;
-              out[d+k]=alpha*((1-pencil)*out[d+k]/Math.max(1,old)+pencil*ink/255);
+              const fur=255*out[d+k]/Math.max(1,old);
+              out[d+k]=alpha*((1-edge)*out[d+k]/Math.max(1,old)+edge*fur/255);
             }
             out[d+3]=alpha;
           }else if(depth<=-1)out.fill(0,d,d+4);
@@ -425,15 +344,18 @@ function strip(n){
 }
 // Label contiguous runs instead of tracing triangles a second time. Only
 // rendered islands outside the coat and enclosed holes can be repaired here.
-function continuousCoat(pixels,work,recheck=true){
+function topologyWorkspace(){
+  return Object.fromEntries(["start","end","labels","parent","kind"].map(key=>[key,new Uint16Array(8192)]));
+}
+function continuousCoat(pixels,work,recheck=true,threshold=45){
   const {start,end,labels,parent,kind}=work;
   let count=0,prev=0,heart=0;
   const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
   for(let y=0;y<size;y++){
     const row=count;let above=prev;
     for(let x=0;x<size;){
-      const l=x,inside=pixels[4*(y*size+x)+3]>45;
-      do{x++;}while(x<size && (pixels[4*(y*size+x)+3]>45)===inside);
+      const l=x,inside=pixels[4*(y*size+x)+3]>threshold;
+      do{x++;}while(x<size && (pixels[4*(y*size+x)+3]>threshold)===inside);
       const id=count++;start[id]=l;end[id]=x;kind[id]=inside;labels[id]=y;parent[id]=id;
       if(y===240 && l<=165 && x>165)heart=id;
       if(!y)continue;
@@ -448,11 +370,19 @@ function continuousCoat(pixels,work,recheck=true){
     fixed=true;
     const y=labels[j],l=start[j],r=end[j];
     if(kind[j]){pixels.fill(0,4*(y*size+l),4*(y*size+r));continue;}
+    if(threshold===0)continue;
     // Sample the warm side underneath a lifted ear, rather than carrying the
     // narrow dark rim across the reopening contact.
     for(let x=l;x<r;x++){
       const out=4*(y*size+x);let src=out;
       for(let d=1;d<24;d++){src=4*(y*size+Math.max(0,l-d));if(pixels[src+3]>242 && pixels[src+1]>125)break;}
+      // At the left shoulder the warm, opaque donor is on the right.
+      if(pixels[src+3]<=242 || pixels[src+1]<=125){
+        for(let col=r;col<size;col++){
+          const nearby=4*(y*size+col);
+          if(pixels[nearby+3]>242 && pixels[nearby+1]>125){src=nearby;break;}
+        }
+      }
       for(let k=0;k<3;k++)pixels[out+k]=pixels[src+k];
       pixels[out+3]=255;
     }
@@ -461,48 +391,14 @@ function continuousCoat(pixels,work,recheck=true){
   // hole when removed. Reclassify only the few frames on which we repaired ink.
   if(fixed&&recheck)continuousCoat(pixels,work,false);
 }
-function earContact(data,rail,t){
-  if(t<.58 || t>.99)return;
-  for(let i=2;i<rail.length-4;i+=4){
-    const x0=rail[i],y0=rail[i+1],x1=rail[i+4],y1=rail[i+5];
-    if(x0>=x1)continue;
-    for(let x=Math.max(178,Math.ceil(x0));x<=Math.min(254,Math.floor(x1));x++){
-      const pin=y0+(y1-y0)*(x-x0)/(x1-x0);
-      let head=Math.max(58,Math.floor(pin-8));
-      while(head<155 && data[4*(head*size+x)+3]<235)head++;
-      const gap=head-pin;if(gap< -4 || gap>20)continue;
-      const donor=4*((head+7)*size+x),force=clamp01((20-gap)/9)*clamp01((t-.58)/.15)*clamp01((.99-t)/.06);
-      for(let y=Math.max(58,Math.floor(pin-3));y<head+5;y++){
-        const at=4*(y*size+x),w=force*clamp01((head+5-y)/3);
-        for(let k=0;k<4;k++)data[at+k]+=w*(data[donor+k]-data[at+k]);
-      }
-    }
-  }
-}
 function linearPoints(a,b,t){
   const d=new Float32Array(a.length);
   for(let i=0;i<d.length;i++)d[i]=a[i]+(b[i]-a[i])*t;
   return d;
 }
-function curvedVector(x,y,u,v,t){
-  const angle=Math.atan2(y,x),change=Math.atan2(x*v-y*u,x*u+y*v);
-  const radius=(1-t)*Math.hypot(x,y)+t*Math.hypot(u,v);
-  return [radius*Math.cos(angle+t*change),radius*Math.sin(angle+t*change)];
-}
 function sweep(a,b,t,hand){
   const p=a.uv,q=b.uv;
   const [[ax,ay],[atx,aty]]=a.axis,[[bx,by],[btx,bty]]=b.axis;
-  if(!hand){
-    const d=new Float32Array(p.length),rx=ax+(bx-ax)*t,ry=ay+(by-ay)*t;
-    for(let i=0;i<p.length;i+=4){
-      const x=(p[i]+p[i+2])*.5,y=(p[i+1]+p[i+3])*.5;
-      const u=(q[i]+q[i+2])*.5,v=(q[i+1]+q[i+3])*.5;
-      const [dx,dy]=curvedVector(x-ax,y-ay,u-bx,v-by,t);
-      const [wx,wy]=curvedVector(p[i]-x,p[i+1]-y,q[i]-u,q[i+1]-v,t);
-      d[i]=rx+dx+wx; d[i+1]=ry+dy+wy; d[i+2]=rx+dx-wx; d[i+3]=ry+dy-wy;
-    }
-    return d;
-  }
   const first=Math.atan2(aty-ay,atx-ax),last=Math.atan2(bty-by,btx-bx);
   const delta=Math.atan2(Math.sin(last-first),Math.cos(last-first));
   const ca=Math.cos(t*delta),sa=Math.sin(t*delta),cb=Math.cos((t-1)*delta),sb=Math.sin((t-1)*delta);
@@ -579,13 +475,152 @@ function raster(out,a,b,d,faces,t,over){
   }
 }
 
+const earRoot=[205.4,90.7], earLength=81;
+const foldStops={4:0,7:.78,5:.88,6:1};
+const earAcross=[.902,.432], earAlong=[.432,-.902];
+export const foldStop=i=>foldStops[i];
+function earPoint(s,w,p){
+  const smooth=q=>{q=clamp01(q);return q*q*(3-2*q);};
+  const angle=q=>p*(1.36+1.70*smooth(q/.95));
+  // Integrate a bent centreline by arc length. Transport its cross-section
+  // with the tangent, so even the sideways silhouette keeps a rounded tip.
+  const hinge=angle(0),sn=Math.sin(hinge),cs=Math.cos(hinge);
+  let cx=194+(earRoot[0]-194)*cs-(earRoot[1]-109)*sn;
+  let cy=109+(earRoot[0]-194)*sn+(earRoot[1]-109)*cs;
+  for(let z=0;z<s;z+=3){
+    const ds=Math.min(3,s-z),a=angle((z+ds/2)/earLength);
+    cx+=ds*(earAlong[0]*Math.cos(a)-earAlong[1]*Math.sin(a));
+    cy+=ds*(earAlong[0]*Math.sin(a)+earAlong[1]*Math.cos(a));
+  }
+  if(s<0){cx+=s*(earAlong[0]*cs-earAlong[1]*sn);cy+=s*(earAlong[0]*sn+earAlong[1]*cs);}
+  const q=clamp01(s/earLength),a=angle(q),width=w*(1-.19*p*smooth(q/.5));
+  return [cx+width*(earAcross[0]*Math.cos(a)-earAcross[1]*Math.sin(a)),
+    cy+width*(earAcross[0]*Math.sin(a)+earAcross[1]*Math.cos(a))];
+}
+function palmTransform(p,tip){
+  const ear=earPoint(78,0,p),u=clamp01(p/.78),reach=u*u*(3-2*u);
+  const angle=reach*(2.82-.33*p),c=Math.cos(angle),s=Math.sin(angle);
+  const x=tip[0]+reach*(ear[0]-12-27*clamp01((1-p)/.22)-tip[0])-6*Math.sin(Math.PI*u);
+  const y=tip[1]+reach*(ear[1]-7-tip[1]);
+  return [c,s,x-c*tip[0]+s*tip[1],y-s*tip[0]-c*tip[1]];
+}
+function surfaceQuad(layer){
+  const x=layer.x,y=layer.y,r=x+layer.width-1,b=y+layer.height-1;
+  return new Float32Array([x,y,r,y,x,b,r,b]);
+}
+// Paint one exposure. Shared edges are half-open; overlapping sections are
+// visited from root to tip so a curled ear naturally occludes its underside.
+function texture(out,src,d,faces,depth){
+  const uv=src.uv,im=src.pixels,w=src.width,h=src.height;
+  for(const [a,b,c] of faces){
+    const i=2*a,j=2*b,k=2*c,x0=d[i],y0=d[i+1];
+    const ax=d[j]-x0,ay=d[j+1]-y0,bx=d[k]-x0,by=d[k+1]-y0,det=ax*by-ay*bx;
+    if(Math.abs(det)<.001)continue;
+    for(let y=Math.max(0,Math.ceil(Math.min(y0,d[j+1],d[k+1])));y<Math.min(size,Math.ceil(Math.max(y0,d[j+1],d[k+1])));y++){
+      let lo=Infinity,hi=-Infinity;
+      for(const [u,v] of [[i,j],[j,k],[k,i]]){
+        if((d[u+1]<=y && y<d[v+1])||(d[v+1]<=y && y<d[u+1])){
+          const x=d[u]+(y-d[u+1])*(d[v]-d[u])/(d[v+1]-d[u+1]);
+          lo=Math.min(lo,x);hi=Math.max(hi,x);
+        }
+      }
+      for(let x=Math.max(0,Math.ceil(lo-1e-6));x<Math.min(size,Math.ceil(hi-1e-6));x++){
+        const u=((x-x0)*by-(y-y0)*bx)/det,v=(ax*(y-y0)-ay*(x-x0))/det;
+        const sx=uv[i]+u*(uv[j]-uv[i])+v*(uv[k]-uv[i])-src.x;
+        const sy=uv[i+1]+u*(uv[j+1]-uv[i+1])+v*(uv[k+1]-uv[i+1])-src.y;
+        if(sx<0||sy<0||sx>=w-1||sy>=h-1)continue;
+        const ix=Math.floor(sx),iy=Math.floor(sy),s=4*(iy*w+ix),n=4*(y*size+x);
+        const fx=sx-ix,fy=sy-iy;
+        const read=k=>(1-fy)*((1-fx)*im[s+k]+fx*im[s+4+k])+fy*((1-fx)*im[s+4*w+k]+fx*im[s+4*w+4+k]);
+        const alpha=read(3);
+        if(alpha<.5)continue;
+        const under=1-alpha/255;
+        if(depth)depth[n/4]=(sx+src.x-earRoot[0])*earAlong[0]+(sy+src.y-earRoot[1])*earAlong[1];
+        for(let ch=0;ch<3;ch++)out[n+ch]=read(ch)+under*out[n+ch];
+        out[n+3]=alpha+(1-alpha/255)*out[n+3];
+      }
+    }
+  }
+}
+function earGrid(p){
+  const points=[];
+  for(let s=-40;s<=92;s+=3)for(const w of [-52,52])points.push(...earPoint(s,w,p));
+  return new Float32Array(points);
+}
+export function foldLayers(whole,back,right,left){
+  const ear={x:147,y:8,width:122,height:137,uv:earGrid(0)};
+  ear.pixels=new Uint8ClampedArray(ear.width*ear.height*4);
+  // Reflect the hidden basal fibres from the same ear. Sampling across the
+  // join continuously avoids picking up the forehead in the mobile texture.
+  for(let y=ear.y;y<ear.y+ear.height;y++)for(let x=ear.x;x<ear.x+ear.width;x++){
+    const u=(x-earRoot[0])*earAcross[0]+(y-earRoot[1])*earAcross[1];
+    const v=(x-earRoot[0])*earAlong[0]+(y-earRoot[1])*earAlong[1];
+    if(v<=-35 || Math.abs(u)>44)continue;
+    let sx=x,sy=y;
+    if(v<12){
+      const radius=Math.sqrt(1-(Math.min(0,v)/35)**2),z=12+.47*(12-v);
+      sx=earRoot[0]+z*earAlong[0]+u/radius*earAcross[0];
+      sy=earRoot[1]+z*earAlong[1]+u/radius*earAcross[1];
+    }
+    if(sx<158||sx>263||sy<4||sy>124)continue;
+    const a=sampleChannel(whole,sx,sy,3),b=sampleChannel(back,sx,sy,3);
+    if(a<=b)continue;
+    const dst=4*((y-ear.y)*ear.width+x-ear.x),coverage=(a-b)/Math.max(1,255-b);
+    for(let ch=0;ch<3;ch++)ear.pixels[dst+ch]=sampleChannel(whole,sx,sy,ch)*255/a*coverage;
+    ear.pixels[dst+3]=255*coverage;
+  }
+  const fixed=back.slice();layPalm(fixed,left);
+  const down=whole.slice();layPalm(down,right);layPalm(down,left);
+  return {surface:new Uint8ClampedArray(whole.length),depth:new Float32Array(size*size),ear,earFaces:strip(ear.uv.length/2),right:{...right,uv:surfaceQuad(right)},fixed,down};
+}
+export function drawFold(out,layers,p){
+  if(p===0){out.set(layers.down);return;}
+  out.set(layers.fixed);
+  const {surface,depth}=layers;
+  surface.fill(0);
+  texture(surface,layers.ear,earGrid(p),layers.earFaces,depth);
+  for(let y=6;y<205;y++)for(let x=134;x<312;x++){
+    const i=y*size+x,n=4*i,a=surface[n+3]/255;
+    if(!a)continue;
+    const b=out[n+3]/255,q=clamp01((depth[i]-15)/25),front=q*q*(3-2*q);
+    // Interpolate depth order at the turn. Coverage is the union in either
+    // order. A partially covered crown pixel must never become a dark seam.
+    for(let k=0;k<3;k++)out[n+k]=out[n+k]*(1-front*a)+surface[n+k]*(1-(1-front)*b);
+    out[n+3]=255*(b+a*(1-b));
+  }
+  paintFoldPalm(out,layers.right,p);
+}
+function paintFoldPalm(out,paw,p){
+  const [c,s,dx,dy]=palmTransform(p,paw.axis[1]),dest=paw.uv.slice();
+  for(let i=0;i<dest.length;i+=2){
+    const x=paw.uv[i],y=paw.uv[i+1];dest[i]=c*x-s*y+dx;dest[i+1]=s*x+c*y+dy;
+  }
+  texture(out,paw,dest,[[0,1,2],[1,3,2]]);
+}
+export function straightPixels(data,out){
+  for(let n=0;n<data.length;n+=4){
+    const a=data[n+3],gain=a?255/a:0;
+    for(let k=0;k<3;k++)out[n+k]=data[n+k]*gain;
+    out[n+3]=a;
+  }
+}
+export function bakeFoldStops(whole,back,down,spec){
+  const paws=['right','left'].map(k=>({...masked(associated(down),spec[k].mask),axis:spec[k].axis}));
+  const layers=foldLayers(associated(whole),associated(back),...paws);
+  return [7,5,6].map(i=>{
+    const out=new Uint8ClampedArray(whole.length),straight=out.slice();
+    drawFold(out,layers,foldStop(i));straightPixels(out,straight);
+    continuousCoat(straight,topologyWorkspace());return straight;
+  });
+}
+
 export class GroomBridge {
-  constructor(rig,seatedSource,rubCoat){
+  constructor(rig,seatedSource,rubCoat,portraitPixels){
     this.rig=rig;this.seatedSource=seatedSource;this.rubCoat=rubCoat;this.book=rig.extra.groom.bridges;this.cache=new Map();
     this.output=context();this.buffer=this.output.createImageData(size,size);
     this.flat=new Uint8ClampedArray(size*size*4);
-    this.topology={};
-    for(const key of ["start","end","labels","parent","kind"])this.topology[key]=new Uint16Array(8192);
+    this.portraitPixels=portraitPixels;
+    this.topology=topologyWorkspace();
   }
   painting(index){
     const c=context(),base=index===7?4:index;
@@ -637,22 +672,21 @@ export class GroomBridge {
     if(this.cache.has(index))return this.cache.get(index);
     if(index===0){
       const whole=this.seatedSource(),spec=this.book.poses.idle;
-      const result={whole,coat:{uv:coord(spec.coat.xy),pixels:seatedCoat(whole)}};
+      const body=this.book.headTravel?this.portraitPixels("body",0):whole;
+      const result={whole,coat:{uv:coord(spec.coat.xy),pixels:seatedCoat(body)}};
       for(const name of ["left","right"])
         result[name]={uv:coord(spec[name].xy),axis:spec[name].axis,...masked(whole,spec[name].mask)};
       this.cache.set(index,result);return result;
     }
     const spec=this.book.poses[keys[index]],sheet=this.painting(index),whole=canvasPixels(sheet);
-    let coat;const upright=index<=4;
-    if(upright){
-      coat=context();coat.drawImage(this.rubCoat(),0,0);
-      if(index===1)this.patch(coat,"open");
-    }else{
-      coat=index===7?this.painting(4):sheet;
-      this.patch(coat,"coat"+(index===7?4:index));
-    }
+    const coat=context();coat.drawImage(this.rubCoat(),0,0);
+    if(index===1)this.patch(coat,"open");
     const result={whole,coat:{uv:coord(spec.coat.xy),pixels:canvasPixels(coat)}};
-    for(const name of ["left","right","ear"]){
+    if(index===1 && this.book.headTravel){
+      this.patch(coat,"liftTorso");
+      result.torso=canvasPixels(coat);
+    }
+    for(const name of ["left","right"]){
       if(!spec[name])continue;
       const loc={uv:coord(spec[name].xy),axis:spec[name].axis};
       if(index===3){
@@ -660,9 +694,8 @@ export class GroomBridge {
         const piece=this.rig.motionPiece(name),tmp=context();tmp.drawImage(piece.canvas,piece.x,piece.y);
         result[name]={...loc,pixels:canvasPixels(tmp)};
       }else{
-        const source=index===4&&name==="ear"?result.coat.pixels:whole;
-        result[name]={...loc,...masked(source,spec[name].mask)};
-        if(index===2 && name!=="ear"){
+        result[name]={...loc,...masked(whole,spec[name].mask)};
+        if(index===2){
           // Bring the licking pose to the mouth on the registered, still head.
           const palm=result[name];palm.y-=7;
           palm.axis=loc.axis.map(([x,y])=>[x,y-7]);
@@ -670,7 +703,7 @@ export class GroomBridge {
         }
       }
     }
-    if(upright && index!==3){
+    if(index!==3){
       result.whole=result.coat.pixels.slice();
       layPalm(result.whole,result.right);layPalm(result.whole,result.left);
       if(index===4){
@@ -678,10 +711,16 @@ export class GroomBridge {
         this.patch(coat,"earBacking");
         result.coat={uv:result.upright.uv,pixels:canvasPixels(coat)};
       }
-    }else if(index===5 || index===7){
-      joinCheek(result.whole,index,index,0,result.right);
     }
     this.cache.set(index,result);return result;
+  }
+  renderFold(phase){
+    const plate=this.plate(4);
+    if(!this.foldLayers)this.foldLayers=foldLayers(plate.upright.pixels,plate.coat.pixels,plate.right,plate.left);
+    drawFold(this.flat,this.foldLayers,phase);
+    straightPixels(this.flat,this.buffer.data);
+    continuousCoat(this.buffer.data,this.topology);
+    this.output.putImageData(this.buffer,0,0);
   }
   prime(pass){
     const a=this.plate(1),b=this.plate(4),t=.36+.28*pass;
@@ -692,36 +731,43 @@ export class GroomBridge {
     let i=keys.indexOf(a),j=keys.indexOf(b),faces=this.book.tri[i+"/"+j];
     if(i!==j && !faces){[i,j]=[j,i];t=1-t;faces=this.book.tri[i+"/"+j];}
     if(this.lastI===i && this.lastJ===j && this.lastT===t)return this.output.canvas;
+    if(i>=4 && j>=4){
+      const phase=foldStop(i)+(foldStop(j)-foldStop(i))*t;
+      this.renderFold(phase);
+      this.lastI=i;this.lastJ=j;this.lastT=t;
+      return this.output.canvas;
+    }
     const start=this.plate(i),end=this.plate(j),data=this.flat;
     const same=i===j,locked=i>=1 && i<=4 && j>=1 && j<=4;
-    const earTurn=!same && i>=4 && j>=4;
     const seatPhase=clamp01(t/.915);
     const seatTravel=seatPhase*seatPhase*(3-2*seatPhase);
-    const from=!earTurn&&i===4?start.upright:start.coat,to=!earTurn&&j===4?end.upright:end.coat;
+    const from=i===4?start.upright:start.coat,to=j===4?end.upright:end.coat;
     if(same)data.set(start.whole);
     else if(locked){
       data.set(i===1?to.pixels:from.pixels);
-      if(i===1)closeEyes(data,from.pixels,to.pixels,t);
+      if(i===1){
+        if(this.book.headTravel){
+          data.set(start.torso);
+          layPalm(data,{pixels:this.portraitPixels("head",1,t),x:0,y:0,width:size,height:size});
+        }else closeEyes(data,from.pixels,to.pixels,t);
+      }
     }else if(i===0 && seatTravel===1){
       data.set(to.pixels);
     }else if(i===0){
       data.fill(0);
       const [step,encoded]=this.book.rise;
       this.seatGrids??=encoded.map(bits=>Int8Array.from(atob(bits),ch=>ch.charCodeAt(0)));
-      this.soles??=[soleDistance(from.pixels),soleDistance(to.pixels)];
-      seatedBody(data,from.pixels,to.pixels,seatTravel,step,this.seatGrids,this.soles);
-      this.heels??=[heelRim(from.pixels),heelRim(to.pixels)];
-      paintHeel(data,from.pixels,to.pixels,seatTravel,this.heels);
-    }else{
-      data.fill(0);raster(data,from,to,linearPoints(from.uv,to.uv,t),faces,t,false);
-      if(i===7 || j===7)foldedShoulder(data,from,to,t);
-      joinCheek(data,i,j,t);
+      const torso=end.torso??to.pixels;
+      this.soles??=[soleDistance(from.pixels),soleDistance(torso)];
+      seatedBody(data,from.pixels,torso,seatTravel,step,this.seatGrids,this.soles,this.book.shoulderTravel);
+      this.heels??=[heelRim(from.pixels),heelRim(torso)];
+      paintHeel(data,from.pixels,torso,seatTravel,this.heels);
+      if(this.book.headTravel)
+        layPalm(data,{pixels:this.portraitPixels("head",seatTravel),x:0,y:0,width:size,height:size});
     }
-    for(const name of same?[]:earTurn?["ear","right","left"]:["right","left"]){
-      const l=start[name],r=end[name],palm=name!=="ear";
-      const dest=sweep(l,r,t,name==="ear"?0:name==="left"?-1:1);
-      if(name==="ear" && i===4 && j===7)earContact(data,dest,t);
-      raster(data,l,r,dest,palm?fan(dest.length/2):strip(dest.length/2),t,true);
+    for(const name of same?[]:["right","left"]){
+      const l=start[name],r=end[name],dest=sweep(l,r,t,name==="left"?-1:1);
+      raster(data,l,r,dest,fan(dest.length/2),t,true);
     }
     if(i===3 && j===4)uncoverShoulder(data,to.pixels,t);
     // At contact, restore the source's exact subpixel ink. Both surfaces
@@ -730,25 +776,20 @@ export class GroomBridge {
     const correction=!same && !locked && border<.075?1-clamp01(border/.075)**2*(3-2*clamp01(border/.075)):0;
     const out=this.buffer.data;
     for(let n=0;n<data.length;n+=4){
-      const residual=correction && (source===start?i:j)!==3?correction:0;
+      const residual=correction && (source===start?i:j)!==3 && (!this.book.headTravel || n>=4*size*305)?correction:0;
       const alpha=data[n+3]+residual*(source.whole[n+3]-data[n+3]);
       out[n+3]=alpha;
       if(alpha<.5){out[n]=out[n+1]=out[n+2]=0;continue;}
       const k=255/alpha;
       for(let ch=0;ch<3;ch++)out[n+ch]=k*(data[n+ch]+residual*(source.whole[n+ch]-data[n+ch]));
     }
-    if(earTurn && t>.012 && t<.988){
-      for(let y=75;y<146;y++)for(let x=202;x<256;x++){
-        const a=4*(y*size+x);
-        if(out[a+3]<180 && out[a-12+3]>220 && out[a+12+3]>220){
-          for(let ch=0;ch<3;ch++)out[a+ch]=(out[a-12+ch]+out[a+12+ch])*.5;
-          out[a+3]=255;
-        }
-      }
-    }
     if(i===0 && t>0 && t<.075)landFrontToe(out,data,start.whole,correction);
     continuousCoat(out,this.topology);
-    if(!locked && !same && !(i===0 && seatTravel===1))registeredPencil(out,this.book,keys[i],keys[j],i===0?seatTravel:t);
+    // The seated-to-lift displacement can leave a detached translucent
+    // tip below the opaque-hole threshold. Keep the connected fringe.
+    if(i===0 && !same && seatTravel>0 && seatTravel<1)
+      continuousCoat(out,this.topology,false,0);
+    if(!this.book.headTravel && !locked && !same && !(i===0 && seatTravel===1))registeredPencil(out,this.book,keys[i],keys[j],i===0?seatTravel:t);
     this.output.putImageData(this.buffer,0,0);this.lastI=i;this.lastJ=j;this.lastT=t;
     return this.output.canvas;
   }

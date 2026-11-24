@@ -68,6 +68,11 @@ export async function createSnow(texture, signal) {
     depth,
     size: (w, h, x, y) => Math.min(h * (0.086 + 0.255 * depth(x, y) ** 0.92), w * 0.49),
     props: {
+      bell: [0.12,0.64],
+      applewood: [0.33,0.94],
+      mat: [0.92,0.9],
+      teaset: [0.42,0.72],
+
       bowl: [0.13, 0.9],
       tunnel: [0.85, 0.64],
       bed: [0.57, 0.91],

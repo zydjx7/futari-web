@@ -57,7 +57,11 @@ export async function mountRoom(dialog, signal, onName) {
     ["bowl", "蓝碗喂食"],
     ["tunnel", "木隧道"]
   ])
-    body.querySelector(".stage-keys").append(button(k, label));
+    {
+      const control = button(k, label);
+      control.hidden = k === "bowl" || k === "tunnel";
+      body.querySelector(".stage-keys").append(control);
+    }
   let home,
     scene,
     wanted,
@@ -123,7 +127,7 @@ export async function mountRoom(dialog, signal, onName) {
     return res.status === 204 ? null : res.json();
   }
   function clock() {
-    scene?.decorate(home?.placed || [], home?.atmosphere || "auto", Boolean(home?.inventory?.bed));
+    scene?.decorate(home?.placed || [], home?.atmosphere || "auto", Boolean(home?.inventory?.bed || home?.inventory?.toastbed || home?.inventory?.knitbed), home?.satiety ?? 70);
   }
   async function applyScene() {
     if (!scene || !home || wanted === home.scene) return;
@@ -221,6 +225,10 @@ export async function mountRoom(dialog, signal, onName) {
         dock.setAttribute("aria-label", home.name + "的兔窝手账");
         body.querySelector('[data-action="pet"]').setAttribute("aria-label", "摸摸" + home.name + "的头");
       }
+      for (const control of body.querySelectorAll(".stage-keys button")) {
+        const key = control.dataset.action;
+        if (key === "bowl" || key === "tunnel") control.hidden = !home.placed.includes(key);
+      }
       const mailTab = dock.querySelector('[data-item="mail"]');
       mailTab.querySelector(".mail-new").hidden = !home.unread;
       mailTab.setAttribute("aria-label", home.unread ? "小信箱，有新来信" : "小信箱");
@@ -271,6 +279,7 @@ export async function mountRoom(dialog, signal, onName) {
     try {
       const result = await api(action, {
         item,
+        ...(action === "place" ? { placed: home.placed.includes(item) ? "0" : "1" } : {}),
         ...(hasReceipt ? { request_id: receipt(action, item) } : {})
       });
       committed = true;
@@ -287,7 +296,7 @@ export async function mountRoom(dialog, signal, onName) {
       if (action === "buy") detail = null;
       await refresh();
       message(
-        action === "buy" ? "已放进小篮子。" : action === "place" ? "在窝里摆好了。" : "它把这一口收下了。"
+        action === "buy" ? "已放进小篮子。" : action === "place" ? home.placed.includes(item) ? "在窝里摆好了。" : "已收进小篮子。" : "它把这一口收下了。"
       );
     } catch (e) {
       if (signal.aborted) return;
@@ -435,7 +444,7 @@ export async function mountRoom(dialog, signal, onName) {
   function pick(key) {
     if (busy) return;
     if (key === "bowl") {
-      if (!home || busy) return;
+      if (!home?.placed.includes("bowl") || busy) return;
       const meal = home.inventory[preferred]
         ? preferred
         : Object.keys(home.inventory).find((id) => home.shop[id].nourishment);

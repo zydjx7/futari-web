@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FUTARI Desktop",
+  "version": "0.2.4",
+  "identifier": "app.futari.desktop",
+  "build": { "frontendDist": "../build/ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "capabilities": ["desktop-local","stage","card","wallpaper","furnishings"],
+      "csp": "default-src 'none'; script-src 'self' futari-ui: http://futari-ui.localhost; style-src 'self' futari-ui: http://futari-ui.localhost 'unsafe-inline'; img-src 'self' futari-ui: http://futari-ui.localhost blob:; connect-src ipc: http://ipc.localhost; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    }
+  },
+  "bundle": { "active": false, "icon": ["icons/icon.ico","icons/icon.png"] }
+}

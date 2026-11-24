@@ -4,7 +4,7 @@ import { Puppet, clamp, foreContact, poseCels } from "./motion.js";
 import { RabbitLife } from "./movement.js";
 import { createPaper, packs } from "./packs.js";
 import { bowl, tunnelBack, tunnelFront, tunnelPlacement, nightLight } from "./props.js";
-import { paintIcon, paintWillow, willowShape, willowRestAngle } from "./stationery.js";
+import { paintIcon, furnishingSize, furnitureTask, snackTask, drawFurnishing, petals, paintWillow, willowShape, willowRestAngle } from "./stationery.js";
 import { daylight, lightWash, nightFigure, nightPrint } from "./light.js";
 
 async function texture(name, signal) {
@@ -117,6 +117,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
     rolling = null,
     lastPush = null,
     bedVisits = 0,
+    furnishingVisits = new Map(),
     hoverAt = -9,
     lastPointer = null,
     above = false,
@@ -147,8 +148,11 @@ export async function createScene(canvas, signal, onPick, onFrame) {
   function layout() {
     things = [];
     const unit = Math.min(w, h * 1.45) * pack.propScale;
-    for (const [name, [x, z]] of Object.entries(pack.props)) {
-      if ((name === "ball" || name === "bed") && !decoration.placed.includes(name)) continue;
+    for (const [anchor, [x, z]] of Object.entries(pack.props)) {
+      const name = anchor === "bed" ? (decoration.placed.find(id=>["toastbed","knitbed"].includes(id)) || "bed")
+        : anchor === "lamp" && decoration.placed.includes("lantern") ? "lantern" : anchor;
+      if (name !== "lamp" && !decoration.placed.includes(name)) continue;
+      if (name === "lantern" && decoration.light === "day") continue;
       if (name === "lamp" && decoration.light !== "night") continue;
       // The inked opening is 258 units high on the original 474-unit-wide drawing.
       const approachY = z + 0.04;
@@ -160,7 +164,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
           left = Math.max(0, Math.min(w * x - width / 2, w * 0.986 - width));
           entryX = (left + 0.348 * width) / w;
         }
-      } else width = unit * { bowl: 0.143, bed: 0.255, ball: 0.084, lamp: 0.19 }[name];
+      } else width = unit * (furnishingSize[name] ?? { bowl: 0.143, bed: 0.255, ball: 0.084, lamp: 0.19 }[name]);
       const tile = sprites[name],
         height = tile ? (width * tile.height) / tile.width : width;
       const base = z * h,
@@ -168,7 +172,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
       if (name === "ball" && w) ballX = clamp(ballX ?? x, ...ballRange(width, z));
       things.push({
         name,
-        z: name === "bed" ? z - 0.155 : z,
+        z: ["bed","mat","toastbed","knitbed"].includes(name) ? z - 0.155 : z,
         x: left ?? (name === "ball" ? (ballX ?? x) : x) * w - width / 2,
         y: bottom - height,
         w: width,
@@ -184,7 +188,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
         w,
         h,
         decoration.light,
-        things.find((o) => o.name === "lamp"),
+        things.find((o) => o.name === "lamp" || o.name === "lantern"),
         pack.id === "snow"
       );
       paperGlow = ctx.createRadialGradient(w * 0.51, h * 0.72, 0, w * 0.51, h * 0.72, Math.max(w, h) * 0.58);
@@ -214,14 +218,23 @@ export async function createScene(canvas, signal, onPick, onFrame) {
     }
     return { key: "go", x, y, after: { key: "nudge", dir } };
   }
-  life.habitat = () => {
-    const bed = things.find((o) => o.name === "bed");
+  life.habitat = (routes = true) => {
+    const bed = things.find((o) => ["bed","toastbed","knitbed"].includes(o.name));
+    const mat = things.find(o => o.name === "mat");
+    const quiet = things.find(o => ["teaset", "lamp", "lantern"].includes(o.name));
+    const log = things.find(o => o.name === "tunnel");
+    const wood = things.find(o=>o.name==="applewood");
     const [bx, by] = pack.props.bowl;
     return {
-      ball: ballTrip(),
+      desktop: false, satiety: decoration.satiety ?? 70,
+      mat: mat && { key: "go", x: (mat.x + mat.w / 2) / w, y: (mat.y + mat.h * .72) / h },
+      quietSpot: quiet && { key: "go", x: (quiet.x + quiet.w * .94) / w, y: quiet.base / h - .012 },
+      tunnel: log && { key: "go", x: (log.x + log.w * .348) / w, y: log.base / h + .04, after: "tunnel" },
+      applewood: wood && {key:"go",x:(wood.x+wood.w*.5)/w,y:wood.base/h,after:{key:"sniff",follow:"nibble"}},
+      ball: routes && ballTrip(),
       bed: bed && { key: "go", x: pack.props.bed[0], y: bed.base / h - 0.008 },
-      bowl: { key: "go", x: bx + 0.065, y: by - 0.012, after: { key: "sniff", dir: -1 } },
-      ownsBed: decoration.ownsBed,
+      bowl: things.some(o => o.name === "bowl") && { key: "go", x: bx + 0.065, y: by - 0.012, after: { key: "sniff", dir: -1 } },
+      ownsBed: decoration.ownsBed || Boolean(bed),
       night: decoration.light === "night"
     };
   };
@@ -259,6 +272,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
       o.shape = willowShape(cx, o.base, o.w, ballAngle);
   }
   function groundThing(c, o) {
+    if (Object.hasOwn(furnishingSize,o.name)) return drawFurnishing(c,icons,o,life.clock,decoration.light);
     if (!pack.props[o.name]) {
       pack.paintLandmark(c, o);
       return;
@@ -341,6 +355,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
         my + size * 0.022,
         size * 0.17 * Math.max(0.12, 1 - life.state.age / 2.8)
       );
+    if(meal==="dandelion" && life.state.kind==="eat") petals(ctx,mx,my,size,life.state.age);
     heart(ctx, x, base, size, p);
     for (const o of layers) if (o.z > z) groundThing(ctx, o);
     pack.after?.(ctx, w, h, life.clock);
@@ -379,7 +394,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
       if (
         above &&
         life.clock - aboveAt >= 0.22 &&
-        ["idle", "listen", "tilt", "sniff", "groom", "loaf"].includes(life.state.kind) &&
+        ["idle", "listen", "tilt", "sniff", "groom"].includes(life.state.kind) &&
         !life.pending &&
         !occupied()
       ) {
@@ -451,6 +466,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
   }
   function occupied() {
     const next = life.pending;
+    if ([life.follow, next?.follow, life.trip?.after?.key, life.trip?.after?.follow, next?.after?.key, next?.after?.follow].includes("eat")) return true;
     return [life.state.kind, life.state.next, life.trip?.after, next?.key, next?.after].some(
       (k) => k === "eat" || k === "tunnel"
     );
@@ -575,9 +591,17 @@ export async function createScene(canvas, signal, onPick, onFrame) {
   function act(key, item, atBowl = false) {
     if (signal.aborted || !figure) return false;
     if (occupied()) return false;
-    if (key === "pet" && (life.state.kind === "pet" || life.pending?.key === "pet")) return false;
+    if (Object.hasOwn(furnishingSize,key)) {
+      const obj=things.find(o=>o.name===key);
+      if(!obj)return false;
+      obj.touched=life.clock;
+      const visit=furnishingVisits.get(key) || 0;
+      furnishingVisits.set(key,visit+1);
+      life.go((obj.x+obj.w*(key==="teaset" ? .94 : .5))/w,obj.base/h-.012,furnitureTask(key,visit));
+      wake();return true;
+    }
     if (key === "tunnel" || key === "bed") {
-      if (key === "bed" && !decoration.placed.includes("bed")) return false;
+      if (!decoration.placed.includes(key)) return false;
       const [x, y] = pack.props[key];
       const log = things.find((o) => o.name === "tunnel");
       life.go(
@@ -589,13 +613,13 @@ export async function createScene(canvas, signal, onPick, onFrame) {
       const trip = ballTrip();
       if (!trip) return false;
       life.issue(trip);
-    } else if (key === "eat" && atBowl) {
+    } else if (key === "eat" && atBowl && decoration.placed.includes("bowl")) {
       meal = item;
       const [x, y] = pack.props.bowl;
-      life.go(x + 0.052, y - 0.026, "eat");
+      life.go(x + 0.052, y - 0.026, snackTask(item));
     } else {
       if (key === "eat") meal = item || "hay";
-      life.issue({ key });
+      life.issue(key === "eat" ? snackTask(item) : { key });
     }
     wake();
     return true;
@@ -648,8 +672,7 @@ export async function createScene(canvas, signal, onPick, onFrame) {
     const active = carry.active;
     carry = null;
     if (!active) return;
-    life.held = false;
-    life.wait = 3;
+    life.dropped();
     canvas.style.cursor = "pointer";
     wake();
     try {
@@ -668,9 +691,10 @@ export async function createScene(canvas, signal, onPick, onFrame) {
         suppressClick = false;
         return;
       }
-      if (e.detail > 1 || dragging || carry?.active) return;
+      if (dragging || carry?.active) return;
       const [x, y] = point(e.clientX, e.clientY),
         pick = target(x, y);
+      if (e.detail > 1 && pick !== "pet") return;
       if (pick) onPick(pick);
       else if (y / h >= pack.floor(x / w) && !occupied()) {
         life.go(x / w, y / h);
@@ -877,8 +901,8 @@ export async function createScene(canvas, signal, onPick, onFrame) {
         if (loading === job) loading = null;
       }
     },
-    decorate(placed, mode, ownsBed = placed.includes("bed")) {
-      decoration = { placed, light: daylight(mode), ownsBed };
+    decorate(placed, mode, ownsBed = placed.includes("bed"), satiety = 70) {
+      decoration = { placed, light: daylight(mode), ownsBed, satiety };
       layout();
       draw();
     },

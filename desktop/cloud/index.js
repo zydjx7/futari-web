@@ -60,9 +60,10 @@ async function handle(request, env, ctx) {
   const albumItemMatch = simpleMatch
     ? null
     : /^\/v1\/album\/([^/]+)\/(image|title|delete)$/.exec(url.pathname);
-  if (!simpleMatch && !albumItemMatch) return fail("没有这个接口", 404);
+  const update = url.pathname.startsWith("/v1/update/");
+  if (!update && !simpleMatch && !albumItemMatch) return fail("没有这个接口", 404);
   if (!configured(env)) return fail("云端尚未配置", 503);
-  const action = simpleMatch ? simpleMatch[1] : "album-item";
+  const action = update ? "update" : simpleMatch ? simpleMatch[1] : "album-item";
   const isAlbum = action === "album" || action === "album-item";
   if (isAlbum && !env.FILES) return fail("云端尚未配置", 503);
   const albumId = albumItemMatch?.[1] || "";
@@ -72,7 +73,7 @@ async function handle(request, env, ctx) {
       return fail("请求方式无效", 405);
   } else {
     const expectGet =
-      action === "state" ||
+      action === "update" || action === "state" ||
       action === "mail" ||
       (action === "album-item" && albumSub === "image");
     if (request.method !== (expectGet ? "GET" : "POST"))
@@ -121,6 +122,17 @@ async function handle(request, env, ctx) {
   if (!token || !tokenPattern.test(token)) return fail("请重新连接云端", 401);
   const session = await readSession(sessionRequest(token), env, "desktop");
   if (session?.role !== "her") return fail("请重新连接云端", 401);
+  if (update) {
+    if (!env.FILES) return fail("云端尚未配置", 503);
+    if (url.pathname === "/v1/update/manifest") {
+      const object = await env.FILES.get("desktop/updates/manifest.json");
+      return json(object ? await object.json() : { ui: null, app: null });
+    }
+    const version = /^\/v1\/update\/ui\/([0-9A-Za-z._-]{1,40})$/.exec(url.pathname)?.[1];
+    if (!version || version === "." || version === "..") return fail("版本无效",400);
+    const object = await env.FILES.get("desktop/updates/ui-" + version + ".zip");
+    return object ? new Response(object.body,{headers:{"Content-Type":"application/zip","Cache-Control":"no-store"}}) : fail("没有该版本",404);
+  }
   if (action === "logout") {
     try {
       await body(request);
@@ -239,6 +251,10 @@ async function handle(request, env, ctx) {
   if (["buy", "feed", "place"].includes(action)) {
     if (!Object.hasOwn(shop, input.item)) return fail("物品无效", 400);
     form.set("item", input.item);
+  }
+  if (action === "place" && Object.hasOwn(input,"placed")) {
+    if (![true,false,"0","1"].includes(input.placed)) return fail("摆放状态无效",400);
+    form.set("placed", input.placed === true || input.placed === "1" ? "1" : "0");
   }
   if (["buy", "feed"].includes(action)) {
     if (

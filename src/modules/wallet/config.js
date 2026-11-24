@@ -16,8 +16,20 @@ export const rewards = Object.freeze({
 
 // Food is consumed one serving at a time. Furnishings are bought once.
 export const shop = {
-  hay: { name: "提摩西草", price: 2, nourishment: 12 },
-  carrot: { name: "胡萝卜块", price: 3, nourishment: 18 },
-  ball: { name: "柳枝球", price: 6, nourishment: 0 },
-  bed: { name: "亚麻软窝", price: 12, nourishment: 0 }
+  hay: { name: "提摩西草", price: 2, nourishment: 12, category: "snack" },
+  carrot: { name: "胡萝卜块", price: 3, nourishment: 18, category: "snack" },
+  ball: { name: "柳枝球", price: 6, nourishment: 0, category: "decor" },
+  bowl: { name: "陶瓷食盆", price: 6, nourishment: 0, category: "decor" },
+  tunnel: { name: "木桶隧道", price: 14, nourishment: 0, category: "decor" },
+  bed: { name: "亚麻软窝", price: 12, nourishment: 0, category: "decor", slot: "nest" },
+  dandelion: { name: "蒲公英干花", price: 4, nourishment: 16, category: "snack" },
+  apple: { name: "烤苹果片", price: 5, nourishment: 22, category: "snack" },
+  strawberry: { name: "冻干草莓粒", price: 8, nourishment: 26, category: "snack" },
+  applewood: { name: "苹果木磨牙串", price: 10, nourishment: 0, category: "decor" },
+  bell: { name: "迷你草编风铃架", price: 18, nourishment: 0, category: "decor" },
+  toastbed: { name: "厚切吐司软垫窝", price: 16, nourishment: 0, category: "decor", slot: "nest" },
+  knitbed: { name: "粗棒针羊羔绒圆篮窝", price: 24, nourishment: 0, category: "decor", slot: "nest" },
+  mat: { name: "稻草编织小凉席", price: 16, nourishment: 0, category: "decor" },
+  teaset: { name: "下午茶小木墩", price: 24, nourishment: 0, category: "decor" },
+  lantern: { name: "蘑菇玻璃暖夜灯", price: 32, nourishment: 0, category: "decor", slot: "lamp" }
 };

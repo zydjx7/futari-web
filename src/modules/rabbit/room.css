@@ -953,3 +953,5 @@
 .desktop-postcard a { display: inline-block; margin: .45rem 0; color: #724529; }
 .desktop-postcard a:first-of-type { font-weight: 600; }
 .desktop-postcard p { margin: .2rem 0; font-size: .86em; line-height: 1.5; }
+
+.book-icon.goods-icon { background-image: url("/app/rabbit/art/goods.webp"); background-size: 400% 300%; }

@@ -1,0 +1,284 @@
+* {
+  box-sizing: border-box;
+}
+html {
+  height: 100%;
+  background: transparent;
+}
+body.pet-room {
+  margin: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  aspect-ratio: auto;
+  background: #faf3e6 var(--paperGrain);
+  color: var(--ink);
+  border: 1px solid #9c795a;
+  border-radius: 19px;
+  box-shadow: inset 0 0 18px #bc97622a;
+  overflow: hidden;
+  transition: opacity 0.12s ease;
+}
+body.dragging-food {
+  opacity: 0.35;
+}
+main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 15px 10px;
+}
+.mast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+.mast > span {
+  grid-column: 1;
+  font:
+    10px Georgia,
+    serif;
+  letter-spacing: 0.24em;
+  color: #94775f;
+}
+.mast h1 {
+  font: 600 22px var(--bookfont);
+  margin: 2px 0 5px;
+}
+.mast #edit-name {
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.mast #rename-form {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+}
+.mast #rename-form[hidden],
+.mast h1[hidden] {
+  display: none;
+}
+.mast #rename-form input {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+}
+.mast #rename-form button {
+  font: inherit;
+  padding: 3px;
+  white-space: nowrap;
+}
+.mast button {
+  grid-column: 2;
+  grid-row: 1/3;
+  border: 0;
+  font: 23px Georgia;
+  background: transparent;
+  color: #83644e;
+  align-self: start;
+  padding: 0 5px;
+}
+.pet-room nav {
+  display: flex;
+  gap: 3px;
+  justify-content: space-between;
+  margin: 6px 0 9px;
+}
+.pet-room nav button {
+  position: relative;
+  padding: 3px 1px 5px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  font:
+    11px "Microsoft YaHei",
+    sans-serif;
+  color: #694e3b;
+}
+.pet-room nav button[aria-pressed="true"] {
+  border-color: #c8a785;
+  background: #f0dfbd88;
+}
+.pet-room nav i {
+  font-size: 24px;
+}
+.pet-room nav .photo-icon {
+  background-image: url("./art/photography.webp");
+  background-size: 200% 100%;
+}
+.pet-room nav .mail-new {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  transform: rotate(9deg);
+  filter: drop-shadow(0 0 3px #ffd585);
+}
+.pet-room nav .gear {
+  font: 22px Georgia;
+  color: #926e51;
+  height: 24px;
+  line-height: 22px;
+}
+.pet-room .book-sheet {
+  position: static;
+  transform: none;
+  animation: none;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0 3px 6px;
+  background: transparent;
+  box-shadow: none;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c3a68a transparent;
+}
+.pet-room .sheet-head {
+  position: static;
+  background: transparent;
+  padding: 0;
+  gap: 5px;
+  margin: 1px 0 8px;
+  display: flex;
+  align-items: center;
+}
+.pet-room .sheet-head h3,
+.pet-room section h3 {
+  margin: 0;
+  font: 600 17px var(--bookfont);
+}
+.sheet-head [data-action="close-sheet"] {
+  display: none;
+}
+.pet-room .item-tile > .book-icon {
+  width: 65px;
+  height: 65px;
+}
+.pet-room .item-grid {
+  gap: 8px;
+}
+.pet-room .item-tile {
+  min-height: 95px;
+  padding: 5px;
+}
+.pet-room .item-postcard > .book-icon {
+  width: 94px;
+  height: 94px;
+}
+.pet-room .item-postcard {
+  padding: 10px;
+}
+.pet-room #notice {
+  font-size: 12px;
+  color: #905f45;
+  margin: 0;
+  line-height: 1.5;
+}
+.pet-room #notice:not(:empty) {
+  padding: 5px 1px;
+}
+.ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 7px 0 13px;
+}
+.ops.light-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.ops button,
+.pet-room form button[type="submit"],
+.scene-row {
+  border: 1px solid #c4a68c;
+  border-radius: 12px;
+  background: #fff6e8;
+  color: #624632;
+  padding: 5px 9px;
+  font:
+    12px/1.5 "Microsoft YaHei",
+    sans-serif;
+  cursor: pointer;
+}
+.ops button[aria-pressed="true"],
+.scene-row[aria-pressed="true"] {
+  background: #edddbe;
+  border-color: #96694a;
+  box-shadow: inset 0 1px 2px #b68f69;
+}
+.scene-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  text-align: left;
+  margin: 6px 0;
+}
+.scene-row i {
+  width: 42px;
+  height: 38px;
+}
+.paper {
+  background: var(--paperGrain);
+  border: 1px solid #dac3a6;
+  border-radius: 5px;
+}
+.pet-room label {
+  display: block;
+  font-size: 12px;
+  margin: 6px 0;
+}
+.pet-room input {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 8px;
+  border: 1px solid #c6a687;
+  border-radius: 8px;
+  background: #fffbf3;
+  color: var(--ink);
+}
+.pet-room .rabbit-journal .journal-heading h3 {
+  font-size: 19px;
+}
+.pet-room .rabbit-journal .journal-tabs button {
+  padding: 5px 11px;
+  font-size: 13px;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #97714f;
+  outline-offset: 1px;
+}
+button:disabled {
+  opacity: 0.58;
+}
+
+.pet-room .book-sheet .sheet-head [data-action="close-sheet"] {
+  display: none;
+}
+.pet-room .mast #close {
+  min-width: 36px;
+  min-height: 36px;
+  position: relative;
+  z-index: 3;
+  cursor: pointer;
+}

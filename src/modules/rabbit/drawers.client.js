@@ -1,3 +1,4 @@
+import { bowl, tunnelBack, tunnelFront } from "./props.js";
 import { icon, stories } from "./stationery.js";
 import { packs } from "./packs.js";
 import catalog from "/app/album/catalog.js";
@@ -23,13 +24,35 @@ export function button(action, label, item) {
   if (item != null) b.dataset.item = item;
   return b;
 }
+function itemIcon(name) {
+  if (name === "bowl" || name === "tunnel") {
+    const canvas = document.createElement("canvas");
+    canvas.className = "book-icon";
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.style.background = "none";
+    canvas.width = canvas.height = 144;
+    const ctx = canvas.getContext("2d");
+    if (name === "bowl") {
+      ctx.scale(.5, .5);
+      ctx.translate(-101, -620);
+      bowl(ctx);
+    } else {
+      ctx.scale(.29, .29);
+      ctx.translate(-1084, -380);
+      tunnelBack(ctx);
+      tunnelFront(ctx);
+    }
+    return canvas;
+  }
+  return icon(name);
+}
 function total(balance) {
   const t = el("span", undefined, "acorn-total");
   t.append(icon("acorn"), el("span", balance + " 颗小橡果"));
   return t;
 }
 
-export function sheetContents({ tab, detail, opened, home, mail, more, busy, scene }) {
+export function sheetContents({ tab, detail, opened, home, mail, more, busy, scene, desktop = false }) {
   const header = el("header", undefined, "sheet-head"),
     title = el("h3", tabs[tab][0]);
   title.id = "sheet-title";
@@ -51,7 +74,7 @@ export function sheetContents({ tab, detail, opened, home, mail, more, busy, sce
       owned = home.inventory[detail] || 0,
       placed = home.placed.includes(detail);
     const card = el("article", undefined, "item-postcard");
-    card.append(icon(detail), el("h4", prod.name), el("p", stories[detail]));
+    card.append(itemIcon(detail), el("h4", prod.name), el("p", stories[detail]));
     const cost = tab === "shop" ? prod.price + " 颗小橡果" : owned + " 份";
     card.append(el("small", cost, "book-tag"));
     const label =
@@ -64,8 +87,8 @@ export function sheetContents({ tab, detail, opened, home, mail, more, busy, sce
         : prod.nourishment
           ? "喂给它"
           : placed
-            ? "已经摆好"
-            : "摆进窝里";
+            ? "收进小篮子"
+            : desktop ? "摆到桌面" : prod.slot === "nest" ? "换上这个窝" : "摆进窝里";
     const action = tab === "shop" ? "buy" : prod.nourishment ? "feed" : "place";
     const submit = button(action, label, detail);
     submit.className = "book-primary";
@@ -73,18 +96,19 @@ export function sheetContents({ tab, detail, opened, home, mail, more, busy, sce
       busy ||
       (tab === "shop"
         ? home.balance < prod.price || (!prod.nourishment && owned > 0)
-        : !owned || (!prod.nourishment && placed) || (!scene && !!prod.nourishment));
+        : !owned || (!scene && !!prod.nourishment));
     card.append(submit);
     nodes.append(card);
   } else if (tab === "bag" || tab === "shop") {
     if (tab === "shop") nodes.append(total(home.balance));
     const grid = el("div", undefined, "item-grid");
+    const snacks = el("div", undefined, "item-grid"), decor = el("div", undefined, "item-grid");
     for (const [id, p] of Object.entries(home.shop)) {
       const qty = home.inventory[id] || 0;
       if (tab === "bag" && !qty) continue;
       const tile = button("detail", undefined, id);
       tile.className = "item-tile";
-      const pic = icon(id);
+      const pic = itemIcon(id);
       if (tab === "bag" && p.nourishment) {
         pic.dataset.food = id;
         pic.title = "拖到兔子嘴边";
@@ -94,9 +118,10 @@ export function sheetContents({ tab, detail, opened, home, mail, more, busy, sce
         el("strong", p.name),
         el("small", tab === "shop" ? p.price + " 颗小橡果" : qty + " 份", "book-tag")
       );
-      grid.append(tile);
+      (tab === "shop" ? p.nourishment ? snacks : decor : grid).append(tile);
     }
-    if (!grid.children.length) {
+    if (tab === "shop") nodes.append(el("h4","小零嘴"),snacks,el("h4","窝里小物"),decor);
+    else if (!grid.children.length) {
       const empty = el("div", undefined, "book-empty");
       empty.append(icon("basket"), el("p", "小篮子还空着。"), button("to-shop", "去小铺子"));
       nodes.append(empty);

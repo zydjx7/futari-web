@@ -43,6 +43,7 @@ const scripts = {
   "scenes/snow.js": snowPack
 };
 const images = {
+  "art/goods.webp": () => import("./art/goods.webp"),
   "art/caramel.webp": () => import("./art/caramel.webp"),
   "art/actions.webp": () => import("./art/actions.webp"),
   "art/stationery.webp": () => import("./art/stationery.webp"),

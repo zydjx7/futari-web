@@ -1,0 +1,95 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+html.appkit-stage { background: #00ff00; }
+canvas {
+  position: absolute;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+}
+#camera-host {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  --ink: #4e392b;
+  --pencil: #8c6a4a;
+  --sheet: #faf3e6;
+  --paperGrain: url("./art/paper.webp");
+  --bookfont: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", "SimSun", Georgia, serif;
+  color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+#camera-host button {
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.desktop-camera .finder-floor {
+  background: rgba(0, 0, 0, 0.01);
+}
+.desktop-camera .finder-frame {
+  cursor: crosshair;
+}
+#camera-host :focus-visible {
+  outline: 2px solid #987144;
+  outline-offset: 2px;
+}
+#selection {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  background: #36251925;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+  font:
+    15px "Microsoft YaHei",
+    sans-serif;
+  color: #513b2d;
+}
+#selection span,
+#selection button {
+  position: relative;
+  display: inline-block;
+  top: 20px;
+  left: 20px;
+  background: #faf3e6;
+  border: 1px solid #ab896d;
+  border-radius: 14px;
+  padding: 8px 14px;
+}
+#selection button {
+  cursor: pointer;
+  margin-left: 8px;
+  font: inherit;
+  color: inherit;
+}
+#selection i {
+  display: none;
+  position: absolute;
+  border: 2px dashed #996f50;
+  border-radius: 8px;
+  background: #ffeac02b;
+  pointer-events: none;
+}
+#food-ghost {
+  position: fixed;
+  z-index: 8;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  transform: translate(-50%, -60%) rotate(-8deg);
+  filter: drop-shadow(1px 4px 2px #62452950);
+}
+[hidden] {
+  display: none !important;
+}

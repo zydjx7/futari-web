@@ -1,0 +1,37 @@
+name: FUTARI Desktop macOS
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 构建机（Sonoma 需自托管并添加 macos-14 标签）
+        type: choice
+        default: macos-15
+        options:
+          - macos-15
+          - self-hosted-macos-14
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ${{ inputs.runner == 'self-hosted-macos-14' && fromJSON('["self-hosted","macOS","macos-14"]') || 'macos-15' }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/desktop/build/cargo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: rustup update stable && rustup override set stable
+      - run: node desktop/scripts/prepare.mjs
+      - run: node --test desktop/tests/*.test.mjs
+      - run: cargo test --locked --release --features cloud-sync --manifest-path desktop/src-tauri/Cargo.toml
+      - run: bash desktop/scripts/build-macos.sh --universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FUTARI-Desktop-macOS
+          path: desktop/dist/FUTARI-Desktop-macOS.zip
+          if-no-files-found: error

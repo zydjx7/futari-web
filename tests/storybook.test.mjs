@@ -1,7 +1,6 @@
 import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { db, origin, request, secrets, setup, signIn } from "./support.mjs";
 import { recordPresence } from "../src/modules/wallet/earnings.js";
 import { rewards } from "../src/modules/wallet/config.js";
@@ -68,8 +67,16 @@ test("日常壳仅加载召唤器，场景与新图集私有，多朝向定稿�
     assert.equal((await get(path, admin)).status, 403);
     assert.equal((await get(path)).status, 200);
   }
-  const atlas = await readFile("outputs/多朝向立体小样/assets/caramel.webp");
-  assert.deepEqual(Buffer.from(await (await get("/app/rabbit/art/caramel.webp")).arrayBuffer()), atlas);
+  // Pin the accepted paintings and the contact-paint bank served with them.
+  for (const [name, digest] of [
+    ["art/caramel.webp", "64bf8123189e0545b7a71ba554f9e0e81453137d44e86358d12c7c91a4b89b15"],
+    ["art/actions.webp", "b370dc7c22c86f749198249e1aace4489d7b4f17c4575a88130d48963a1c40b6"],
+    ["action-layout.js", "373275f0ff6046feedb930cc09dfd5e92928a7d4c615de460caf9c7a377f3d0a"]
+  ]) {
+    const response = await get("/app/rabbit/" + name);
+    assert.equal(response.status, 200);
+    assert.equal(createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex"), digest, name);
+  }
 });
 test("真实心跳和打开兔窝并发静默入账，日上限、跨设备与升级前未领都守恒", async () => {
   const now = Math.floor(Date.now() / 1000),
@@ -153,4 +160,21 @@ test("火漆信只收管理员留言和赠礼，逐封阅读、乱序翻页和�
   const ledger = await (await get("/admin/wallet", admin)).text();
   assert.match(ledger, /摸摸头/);
   assert.match(ledger, /留给你读的字/);
+});
+
+test("三种新零食可投喂，三个窝互换且可收回", async () => {
+  await adjust(150);
+  for (const item of ["dandelion","apple","strawberry","bed","toastbed","knitbed"]) {
+    assert.equal((await post("/api/rabbit/buy",{item,request_id:randomUUID()})).status,200);
+    if ((await room()).shop[item].category === "snack") {
+      await db.prepare("UPDATE rabbit_home SET last_fed=NULL,satiety=0").run();
+      assert.equal((await post("/api/rabbit/feed",{item,request_id:randomUUID()})).status,200);
+      assert.equal((await room()).inventory[item] || 0,0);
+    } else {
+      assert.equal((await post("/api/rabbit/place",{item})).status,204);
+      assert.deepEqual((await room()).placed,[item]);
+    }
+  }
+  assert.equal((await post("/api/rabbit/place",{item:"knitbed",placed:"0"})).status,204);
+  assert.deepEqual((await room()).placed,[]);
 });

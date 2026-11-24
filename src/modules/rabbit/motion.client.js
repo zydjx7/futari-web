@@ -253,7 +253,7 @@ class Puppet {
       c.translate(0, p.sniff * 0.58 + p.chew * 1.8);
       draw("fNose");
       c.restore();
-      const lid = Math.max(p.blink * (1 - alert), p.press);
+      const lid = p.blink * (1 - alert);
       const opacity = c.globalAlpha;
       for (const [name, x] of [
         ["Left", -58.5],
@@ -263,7 +263,7 @@ class Puppet {
         if (c.globalAlpha > 0)
           joint(x, -131, 0, 1 + 0.15 * alert, 1 - 0.92 * lid, () => draw("f" + name + "Eye"));
         c.globalAlpha = opacity * ease(0.32, 0.84, lid);
-        if (c.globalAlpha > 0) joint(x, -130, 0, 0.79, 0.87, () => draw("f" + name + "Lid"));
+        if (c.globalAlpha > 0) joint(x, -130, 0, 0.79, p.washLids ? -0.87 : 0.87, () => draw("f" + name + "Lid"));
       }
       c.globalAlpha = opacity;
     });

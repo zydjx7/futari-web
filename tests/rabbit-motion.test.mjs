@@ -1,12 +1,14 @@
+import { bakeFoldStops, foldStop } from "../src/modules/rabbit/groom-bridge.client.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import art from "../src/modules/rabbit/art/action-layout.client.js";
+import layout from "../src/modules/rabbit/art/layout.client.js";
 import { createPaper } from "../src/modules/rabbit/scenes/paper.client.js";
 import { Puppet, poseCels, readMasks, maskAt } from "../src/modules/rabbit/motion.client.js";
 import { GroomPaint, groomDuration, rubbingHands, rubProgress } from "../src/modules/rabbit/groom.client.js";
 
-import { willowShape, willowRestAngle } from "../src/modules/rabbit/stationery.client.js";
+import { willowShape, willowRestAngle, snackTask, furnitureTask } from "../src/modules/rabbit/stationery.client.js";
 
 // The Worker serves browser modules under extension-mapped URLs.
 const text = await readFile(new URL("../src/modules/rabbit/movement.client.js", import.meta.url), "utf8");
@@ -21,6 +23,21 @@ function world(t, contacts = []) {
   return new RabbitLife(createPaper(), (...point) => contacts.push(point));
 }
 if (!globalThis.matchMedia) globalThis.matchMedia = () => ({ matches: false });
+
+test("摸头压耳保留椭圆眼，端坐与压耳都能自然眨眼", (t) => {
+  const rig = new Puppet(null, layout, art);
+  const life = world(t);
+  const ctx = { globalAlpha: 1, save() {}, restore() {}, translate() {}, scale() {}, rotate() {} };
+  for (const press of [0, 1]) {
+    for (const blink of [0, 1]) {
+      const eyes = [];
+      rig.part = (_, name) => { if (/Eye$|Lid$/.test(name)) eyes.push(name); };
+      rig.front(ctx, { ...life.pose(), action: press ? "pet" : "idle", press, blink });
+      const part = blink ? "Lid" : "Eye";
+      assert.deepEqual(eyes, ["fLeft" + part, "fRight" + part]);
+    }
+  }
+});
 
 test("两种蹬跃原地蓄力，前爪先着地，后脚收回后停止水平位移", (t) => {
   for (const distance of [0.04, 0.35]) {
@@ -75,7 +92,7 @@ test("连续远跳中嗅闻后继续赴约，打断伸展不会闪回或吞掉�
   assert.ok(Math.abs(life.x - 0.91) < 0.001);
   life.stay();
   life.issue({ key: "rest" });
-  for (let i = 0; i < 850 && life.state.kind !== "stretch"; i++) life.update(0.01);
+  for (let i = 0; i < 4200 && life.state.kind !== "stretch"; i++) life.update(0.01);
   assert.equal(life.state.kind, "stretch");
   life.update(0.9);
   const before = life.pose().weight;
@@ -295,7 +312,7 @@ test("三种自然醒各抽一次，直接起身与偶发伸腰都回到相应�
   let draw = 0;
   t.mock.method(Math,"random",() => draw);
   const life = world(t);
-  for (const [rest,chance] of [["loaf",.32],["sploot",.38],["flop",.40]]) {
+  for (const [rest,chance] of [["loaf",.30],["sploot",.65],["flop",.80]]) {
     for (const shouldStretch of [false,true]) {
       draw = chance + (shouldStretch ? -1e-6 : 1e-6);
       life.stay();
@@ -323,8 +340,7 @@ test("三种自然醒各抽一次，直接起身与偶发伸腰都回到相应�
   life.issue({key:"pet"});assert.equal(life.pose().phase,held);
   for(let i=0;i<95 && life.state.kind!=="pet";i++)life.update(1/60);
   assert.equal(life.state.kind,"pet");
-  life.stay();life.face={view:"front",dir:-1};life.autoIndex=1;draw=0;life.wander();
-  assert.equal(life.state.kind,"groom");
+
 });
 
 test("凝听持续 2.1 秒，停住头部时耳尖独立微动，并在半秒内柔和归位", (t) => {
@@ -387,7 +403,7 @@ test("洗脸舒缓连搓两轮、单侧顺耳，身体与右臀始终对齐正�
     if (a !== b) {
       const f = (a || "idle") + "/" + (b || "idle"), r = (b || "idle") + "/" + (a || "idle");
       const i=contacts.indexOf(a),j=contacts.indexOf(b);
-      assert.ok(art.groom.bridges.tri[i+"/"+j] || art.groom.bridges.tri[j+"/"+i] ||
+      assert.ok((foldStop(i)!==undefined && foldStop(j)!==undefined) || art.groom.bridges.tri[i+"/"+j] || art.groom.bridges.tri[j+"/"+i] ||
         art.groom.fields[f] || art.groom.fields[r],f);
     }
     if (current) for (const dir of [-1,1]) {
@@ -428,10 +444,10 @@ test("洗脸舒缓连搓两轮、单侧顺耳，身体与右臀始终对齐正�
 });
 
 test("洗脸只抬坐姿的那一对前爪，顺耳时耳尖来到短爪旁", () => {
-  const { arms, ears } = art.groom;
+  const { arms } = art.groom;
   const density = art.parts.wash1_lift[2] / 252;
   for (const [i, key] of ["idle", "wash1_lift", "wash2_paws", "wash3_cheekUp", "wash4_cheekDown",
-    "wash5_earReach", "wash6_earStroke"].entries()) {
+    ].entries()) {
     assert.equal(arms[key].length, 2);
     for (const paw of arms[key]) {
       assert.ok(i === 0 ? paw.center[1] > 230*density : paw.center[1] < 200*density, key);
@@ -444,18 +460,20 @@ test("洗脸只抬坐姿的那一对前爪，顺耳时耳尖来到短爪旁", ()
       assert.ok(paw.edge.every(([, y]) => y > chinY*density), key);
     }
   }
-  const paw = arms.wash6_earStroke[1];
-  for (const key of ["wash5_earReach", "wash6_earStroke"]) {
-    const ys = arms[key][1].edge.map((p) => p[1]);
-    assert.ok(Math.max(...ys) - Math.min(...ys) < 48*density, key);
+  const back=new Uint8ClampedArray(384*384*4);
+  for(let y=83;y<376;y++)for(let x=40;x<336;x++){
+    const n=4*(y*384+x);back.set([190+x%43,110+y%39,78,255],n);
   }
-  const tip = ears.wash6_earStroke.shape.at(-1);
-  assert.ok(tip[1] > ears.wash5_earReach.shape.at(-1)[1] + 18*density);
-  assert.ok(Math.min(...paw.edge.map(([x, y]) => Math.hypot(x - tip[0], y - tip[1]))) < 8*density);
-  const mid=art.groom.bridges.poses.wash_earMid;
-  const e=mid.ear.axis[1],w=mid.right.axis[1];
-  assert.ok(Math.hypot(e[0]-w[0],e[1]-w[1])<5);
-  assert.ok(mid.left.axis[1][1]>mid.right.axis[1][1]+100);
+  const rub=back.slice(),down=back.slice();
+  for(let y=25;y<91;y++)for(let x=190;x<245;x++)rub.set([223,145,128,255],4*(384*y+x));
+  for(let y=240;y<303;y++)for(let x=165;x<230;x++)down.set([240,206,159,255],4*(384*y+x));
+  const stops=bakeFoldStops(rub,back,down,art.groom.bridges.poses.wash4_cheekDown);
+  for(const pixels of stops){
+    assert.deepEqual(pixels.subarray(4*384*305),rub.subarray(4*384*305));
+    for(let row=95;row<230;row++)assert.deepEqual(
+      pixels.subarray(4*(384*row+80),4*(384*row+166)),rub.subarray(4*(384*row+80),4*(384*row+166)));
+  }
+  assert.notDeepEqual(stops[0],stops[2]);
   assert.ok(art.groom.bridges.edits.mid.length>0);
 });
 
@@ -610,4 +628,202 @@ test("连续短腿蹬跃保留衔接的时间余量，终点完整收腿后才�
       Array.from({ length: contacts.length }, (_, i) => (i % 2 ? "hind" : "fore"))
     );
   }
+});
+
+test("新零嘴与摆件按顺序复用动作", (t) => {
+  for (const [task, first, second] of [
+    [snackTask("dandelion"), "sniff", "eat"],
+    [snackTask("strawberry"), "eat", "groom"],
+    [furnitureTask("applewood", 0), "sniff", "nibble"],
+    [furnitureTask("bell", 1), "alert", "tilt"],
+  ]) {
+    const life = world(t), seen = [];
+    life.issue(task);
+    for (let i = 0; i < 250; i++) {
+      life.update(.035);
+      if (seen.at(-1) !== life.state.kind) seen.push(life.state.kind);
+    }
+    assert.ok(seen.indexOf(first) >= 0 && seen.indexOf(second) > seen.indexOf(first), seen.join(" → "));
+  }
+  assert.deepEqual([0,1].map(i=>furnitureTask("knitbed",i)), ["loaf","flop"]);
+  const life = world(t);life.issue(snackTask("apple"));
+  let heart = false;
+  for(let i=0;i<160;i++){life.update(.03);if(life.state.kind!=="eat" && life.pose().heart>.2)heart=true;}
+  assert.ok(heart);
+});
+
+test("120 秒侧睡在第一秒翻到侧面，自然醒经半翻、伸腰、转正洗脸", t => {
+  const life = world(t);
+  t.mock.method(Math, "random", () => 2 / 3);
+  life.face = { view: "side", dir: 1 };
+  life.issue({ key: "flop" });
+  assert.equal(life.state.duration, 120);
+  const cel = () => {
+    const [a, b, mix] = poseCels(life.face, life.pose());
+    return mix < .5 ? a : b;
+  };
+  life.update(.55);
+  assert.equal(cel(), "halfRoll");
+  life.update(.45);
+  assert.equal(cel(), "onFlank");
+  life.update(119);
+  const keys = [], actions = [];
+  for (let i = 0; i < 550 && life.state.kind !== "groom"; i++) {
+    if (keys.at(-1) !== cel()) keys.push(cel());
+    if (actions.at(-1) !== life.state.kind) actions.push(life.state.kind);
+    life.update(.01);
+  }
+  assert.deepEqual(keys.slice(0, 3), ["onFlank", "halfRoll", "stretchLow"]);
+  assert.deepEqual(actions, ["stretch", "turn"]);
+  assert.equal(life.state.kind, "groom");
+  assert.equal(life.face.view, "front");
+  life.habitat = () => ({ desktop: true });
+  life.stay();
+  life.begin({ key: "flop" });
+  life.update(.60);
+  assert.equal(life.state.duration, 150);
+});
+
+test("受惊与落地冷却只限制自主侧睡，落地先停足一秒", t => {
+  const life = world(t);
+  let draw = .99;
+  t.mock.method(Math, "random", () => draw);
+  for (const event of ["alert", "carry"]) {
+    life.stay();
+    life.face = { view: "front", dir: 1 };
+    life.calm = 1;
+    if (event === "alert") life.issue({ key: "alert" });
+    else life.dropped();
+    assert.equal(life.calm, event === "alert" ? .65 : .75);
+    assert.equal(life.waryUntil, life.clock + (event === "alert" ? 25 : 15));
+    if (event === "carry") {
+      draw = .49;
+      life.update(.99);
+      assert.equal(life.state.kind, "landed");
+      life.update(.011);
+      assert.equal(life.state.kind, "groom");
+    }
+    life.stay();
+    life.calm = 1;
+    life.face = { view: "side", dir: 1 };
+    life.activeLeft = 0;
+    draw = .99;
+    life.wander();
+    assert.equal(life.state.kind, "sploot");
+    life.issue({ key: "flop" });
+    life.update(.24);
+    assert.equal(life.state.kind, "flop");
+    life.stay();
+    life.update(life.waryUntil - life.clock + .01);
+    life.activeLeft = 0;
+    life.wander();
+    assert.equal(life.state.kind, "flop");
+  }
+});
+
+test("高安全感吐司在地面转成大字趴，承接满权重和连续呼吸", t => {
+  const life = world(t);
+  t.mock.method(Math, "random", () => .34);
+  life.calm = .9;
+  life.issue({ key: "loaf" });
+  const { x, y } = life;
+  let turning = false;
+  for (let i = 0; i < 4200; i++) {
+    const breath = life.pose().breath;
+    life.update(.01);
+    assert.ok(Math.abs(life.pose().breath - breath) < .023);
+    assert.equal(life.pose().height, 0);
+    assert.equal(life.x, x);
+    assert.equal(life.y, y);
+    if (life.state.kind === "sploot") break;
+    if (life.state.kind === "turn") {
+      assert.equal(life.pose().turn.waking, true);
+      turning = true;
+    } else assert.equal(life.state.kind, "loaf");
+  }
+  assert.ok(turning);
+  assert.equal(life.state.kind, "sploot");
+  assert.equal(life.pose().weight, 1);
+});
+
+test("三种睡姿均可在睡眠中途平滑响应摸头或喂食", t => {
+  const life = world(t);
+  for (const nap of ["loaf", "sploot", "flop"]) {
+    for (const action of ["pet", "eat"]) {
+      life.stay();
+      life.face = { view: nap === "loaf" ? "front" : "side", dir: 1 };
+      life.issue({ key: nap });
+      life.update(life.state.duration / 2);
+      const before = poseCels(life.face, life.pose());
+      life.issue({ key: action });
+      assert.deepEqual(poseCels(life.face, life.pose()), before);
+      life.update(.12);
+      assert.equal(life.state.kind, nap);
+      assert.ok(life.pose().weight < 1);
+      for (let i = 0; i < 100 && life.state.kind !== action; i++) life.update(.01);
+      assert.equal(life.state.kind, action);
+      assert.equal(life.face.view, "front");
+    }
+  }
+});
+
+test("连摸按十二秒窗口累计，回味后就地趴下", t => {
+  t.mock.method(Math, "random", () => .5);
+  for (const count of [2, 3]) {
+    const life = world(t);
+    for (let i = 0; i < count; i++) {
+      life.issue({ key: "pet" });
+      life.update(.25);
+    }
+    assert.equal(life.petStreak, count);
+    life.update(2.26);
+    assert.equal(life.state.kind, "savor");
+    assert.equal(life.face.view, "front");
+    assert.equal(life.state.duration, 5.5);
+    life.update(5.5);
+    if (count === 3) life.update(.60);
+    assert.equal(life.state.kind, count === 3 ? "flop" : "loaf");
+    life.update(12);
+    assert.equal(life.petStreak, 0);
+  }
+});
+
+test("环境决定安全感基准，缺省与空腹区分，喂食增加安全感", t => {
+  const life = world(t);
+  assert.equal(life.calm, .45);
+  for (const [env, target] of [
+    [{}, .60], [{ satiety: 0 }, .30], [{ satiety: 30, night: true }, .55],
+    [{ satiety: 70, ownsBed: true, mat: {}, night: true }, .85]
+  ]) {
+    life.habitat = () => env;
+    life.update(900);
+    assert.ok(Math.abs(life.calm - target) < .0001);
+  }
+  life.calm = .5;
+  life.issue({ key: "eat" });
+  assert.ok(Math.abs(life.calm - .68) < 1e-12);
+});
+
+test("自主节奏先活动二至四次再休息，饥饿时可到碗边嗅闻抬头", t => {
+  let draw = 0;
+  t.mock.method(Math, "random", () => draw);
+  for (const [sample, count] of [[0, 2], [.5, 3], [.99, 4]]) {
+    draw = sample;
+    const life = world(t);
+    const tasks = [];
+    life.begin = task => tasks.push(task);
+    for (let i = 0; i <= count; i++) life.wander();
+    assert.ok(tasks.slice(0, count).every(task => !["loaf", "sploot", "flop", "rest"].includes(task.key)
+      && !["loaf", "sploot", "flop", "rest"].includes(task.after)));
+    assert.ok(["loaf", "sploot"].includes(tasks.at(-1).key));
+  }
+  draw = .1;
+  const life = world(t);
+  life.habitat = () => ({ satiety: 0, bowl: { key: "go", x: .7, y: .8 } });
+  life.wander();
+  assert.deepEqual(life.trip.after, { key: "sniff", follow: "tilt" });
+  for (let i = 0; i < 1000 && life.state.kind !== "tilt"; i++) life.update(.01);
+  assert.equal(life.state.kind, "tilt");
+  assert.equal(life.face.view, "front");
+  assert.equal(life.x, .7);
 });

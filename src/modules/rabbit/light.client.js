@@ -32,8 +32,8 @@ export function lightWash(ctx, w, h, light, lamp, snow = false) {
     night: ["rgba(49,63,114,.91)", "rgba(65,85,132,.81)", "rgba(90,112,149,.69)"]
   }[light];
   colors.forEach((color, i) => sky.addColorStop(i * 0.5, color));
-  const x = night && lamp ? lamp.x + lamp.w * .5 : w * .74;
-  const y = night && lamp ? lamp.y + lamp.h * .48 : h * .32;
+  const x = (night || lamp?.name === "lantern") && lamp ? lamp.x + lamp.w * .5 : w * .74;
+  const y = (night || lamp?.name === "lantern") && lamp ? lamp.y + lamp.h * .48 : h * .32;
   const radius = Math.max(1, Math.min(w,h) * (night ? .32 : .67));
   const glow = ctx.createRadialGradient(x,y,0,x,y,radius);
   glow.addColorStop(0, night ? "rgba(255,199,118,.34)" : light === "dusk" ? "rgba(255,211,152,.28)" : "rgba(255,249,199,.10)");

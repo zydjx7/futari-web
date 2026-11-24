@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>FUTARI · 手账</title>
+    <script type="module" src="boot.js" data-entry="card"></script>
+  </head>
+  <body class="pet-room">
+    <main>
+      <header class="mast">
+        <span>FUTARI</span>
+        <h1><button id="edit-name" type="button" aria-label="给兔子改名" disabled>焦糖兔手账</button></h1>
+        <form id="rename-form" hidden>
+          <input name="name" aria-label="兔子名字，1 到 12 个字" autocomplete="off" required />
+          <button type="submit">保存</button><button id="cancel-name" type="button">取消</button>
+        </form>
+        <button id="close" aria-label="合上手账">×</button>
+      </header>
+      <nav aria-label="手账书签"></nav>
+      <section class="book-sheet" id="page"></section>
+      <p id="notice" role="status"></p>
+    </main>
+  </body>
+</html>

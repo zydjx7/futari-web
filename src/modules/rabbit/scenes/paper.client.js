@@ -23,6 +23,11 @@ export function createPaper() {
       };
     },
     props: {
+      bell: [0.1,0.64],
+      applewood: [0.36,0.89],
+      mat: [0.82,0.87],
+      teaset: [0.3,0.62],
+
       bowl: [0.24, 0.785],
       tunnel: [0.82, 0.572],
       bed: [0.48, 0.77],
