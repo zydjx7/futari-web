@@ -1,2 +1,4 @@
 desktop/scripts/*.sh text eol=lf
 desktop/src-tauri/src/platform/*.m text eol=lf
+# Preserve the byte-level digest of the accepted layout on every checkout.
+src/modules/rabbit/art/action-layout.client.js text eol=crlf

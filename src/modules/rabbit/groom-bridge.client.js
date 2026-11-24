@@ -485,8 +485,10 @@ function earPoint(s,w,p){
   // Integrate a bent centreline by arc length. Transport its cross-section
   // with the tangent, so even the sideways silhouette keeps a rounded tip.
   const hinge=angle(0),sn=Math.sin(hinge),cs=Math.cos(hinge);
-  let cx=194+(earRoot[0]-194)*cs-(earRoot[1]-109)*sn;
-  let cy=109+(earRoot[0]-194)*sn+(earRoot[1]-109)*cs;
+  // Pivot inside the seated temple so the underside follows its round cheek.
+  const hingeX=177,hingeY=86;
+  let cx=hingeX+(earRoot[0]-hingeX)*cs-(earRoot[1]-hingeY)*sn;
+  let cy=hingeY+(earRoot[0]-hingeX)*sn+(earRoot[1]-hingeY)*cs;
   for(let z=0;z<s;z+=3){
     const ds=Math.min(3,s-z),a=angle((z+ds/2)/earLength);
     cx+=ds*(earAlong[0]*Math.cos(a)-earAlong[1]*Math.sin(a));
