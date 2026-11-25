@@ -69,9 +69,9 @@ test("日常壳仅加载召唤器，场景与新图集私有，多朝向定稿�
   }
   // Pin the accepted paintings and the contact-paint bank served with them.
   for (const [name, digest] of [
-    ["art/caramel.webp", "64bf8123189e0545b7a71ba554f9e0e81453137d44e86358d12c7c91a4b89b15"],
-    ["art/actions.webp", "cc549bfc6ea813e604931a399513f17a02c3969dc48192c743019d4b9fd836d4"],
-    ["action-layout.js", "997619e81be519f45ccdcb2f592bf637c08a0799c0979ac1fb8f3b5d78ea4036"]
+    ["art/caramel.webp", "894a978e118d33b6d5acb196890251f866f1cd3462db5d163fdb4fd7cce63b0b"],
+    ["art/actions.webp", "a539e711c7ca38d8f73ad3b07ff08013c780d34dd727c6ba255180657aa1fea7"],
+    ["action-layout.js", "83c777acabeae341ff93e672adbd47e556e0eeabc97b3707a33e785275beaa10"]
   ]) {
     const response = await get("/app/rabbit/" + name);
     assert.equal(response.status, 200);
